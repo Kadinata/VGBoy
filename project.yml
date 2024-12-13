@@ -34,9 +34,11 @@
     - +:test/**
     - -:test/support
   :source:
-    - src/**
+    - core/src/**
   :support:
     - test/support
+  :include:
+    - core/include/**
   :libraries: []
 
 :defines:
@@ -57,6 +59,8 @@
   :enforce_strict_ordering: TRUE
   :plugins:
     - :ignore
+    - :ignore_arg
+    - :return_thru_ptr
     - :callback
   :treat_as:
     uint8:    HEX8
@@ -98,4 +102,5 @@
   :enabled:
     - stdout_pretty_tests_report
     - module_generator
+    - gcov
 ...
