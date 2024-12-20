@@ -2,10 +2,9 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
-#include "memory.h"
 #include "status_code.h"
-#include "sys_def.h"
 
 #define INST(handler_fn, dest_operand, src_operand, inst_length, cycle, alt_cycle) \
   ((instruction_t){                                                                \
@@ -144,6 +143,11 @@ status_code_t push_reg_16(cpu_state_t *const state, reg_16_ptr_t reg);
 status_code_t pop_reg_16(cpu_state_t *const state, reg_16_ptr_t reg);
 status_code_t read_reg_16_plus_offset(cpu_state_t *const state, addressing_mode_t const addr_mode, uint16_t *const data);
 
+static inline status_code_t bus_read_8(cpu_state_t *const state, uint16_t address, uint8_t *const data);
+static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t address, uint8_t const data);
+static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t address, uint16_t *const data);
+static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data);
+
 status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
 status_code_t op_NOP(cpu_state_t *const state, inst_operands_t *const operands);
 status_code_t op_STOP(cpu_state_t *const state, inst_operands_t *const operands);
@@ -198,341 +202,358 @@ status_code_t op_SET(cpu_state_t *const state, addressing_mode_t const addr_mode
 
 static instruction_t inst_table[] = {
     /* 0x00 - 0x0F */
-    INST(op_NOP, AM_NONE, AM_NONE, 1, 1, 0),
-    INST(op_LD_16, AM_REG_BC, AM_IMM_D_16, 3, 3, 0),
-    INST(op_LD_8, AM_MEM_BC, AM_REG_A, 1, 2, 0),
-    INST(op_INC_16, AM_REG_BC, AM_NONE, 1, 2, 0),
+    [0x00] = INST(op_NOP, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x01] = INST(op_LD_16, AM_REG_BC, AM_IMM_D_16, 3, 3, 0),
+    [0x02] = INST(op_LD_8, AM_MEM_BC, AM_REG_A, 1, 2, 0),
+    [0x03] = INST(op_INC_16, AM_REG_BC, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_B, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_B, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_B, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RLCA, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x04] = INST(op_INC_8, AM_REG_B, AM_NONE, 1, 1, 0),
+    [0x05] = INST(op_DEC_8, AM_REG_B, AM_NONE, 1, 1, 0),
+    [0x06] = INST(op_LD_8, AM_REG_B, AM_IMM_D_8, 2, 2, 0),
+    [0x07] = INST(op_RLCA, AM_NONE, AM_NONE, 1, 1, 0),
 
-    INST(op_LD_16, AM_IMM_A_16, AM_REG_SP, 3, 5, 0),
-    INST(op_ADD_16, AM_REG_HL, AM_REG_BC, 1, 2, 0),
-    INST(op_LD_8, AM_REG_A, AM_MEM_BC, 1, 2, 0),
-    INST(op_DEC_16, AM_REG_BC, AM_NONE, 1, 2, 0),
+    [0x08] = INST(op_LD_16, AM_IMM_A_16, AM_REG_SP, 3, 5, 0),
+    [0x09] = INST(op_ADD_16, AM_REG_HL, AM_REG_BC, 1, 2, 0),
+    [0x0A] = INST(op_LD_8, AM_REG_A, AM_MEM_BC, 1, 2, 0),
+    [0x0B] = INST(op_DEC_16, AM_REG_BC, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_C, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_C, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_C, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RRCA, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x0C] = INST(op_INC_8, AM_REG_C, AM_NONE, 1, 1, 0),
+    [0x0D] = INST(op_DEC_8, AM_REG_C, AM_NONE, 1, 1, 0),
+    [0x0E] = INST(op_LD_8, AM_REG_C, AM_IMM_D_8, 2, 2, 0),
+    [0x0F] = INST(op_RRCA, AM_NONE, AM_NONE, 1, 1, 0),
 
     /* 0x10 - 0x1F */
-    INST(op_STOP, AM_NONE, AM_NONE, 2, 1, 0),
-    INST(op_LD_16, AM_REG_DE, AM_IMM_D_16, 3, 3, 0),
-    INST(op_LD_8, AM_MEM_DE, AM_REG_A, 1, 2, 0),
-    INST(op_INC_16, AM_REG_DE, AM_NONE, 1, 2, 0),
+    [0x10] = INST(op_STOP, AM_NONE, AM_NONE, 2, 1, 0),
+    [0x11] = INST(op_LD_16, AM_REG_DE, AM_IMM_D_16, 3, 3, 0),
+    [0x12] = INST(op_LD_8, AM_MEM_DE, AM_REG_A, 1, 2, 0),
+    [0x13] = INST(op_INC_16, AM_REG_DE, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_D, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_D, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_D, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RLA, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x14] = INST(op_INC_8, AM_REG_D, AM_NONE, 1, 1, 0),
+    [0x15] = INST(op_DEC_8, AM_REG_D, AM_NONE, 1, 1, 0),
+    [0x16] = INST(op_LD_8, AM_REG_D, AM_IMM_D_8, 2, 2, 0),
+    [0x17] = INST(op_RLA, AM_NONE, AM_NONE, 1, 1, 0),
 
-    INST(op_JR, JM_UNCOND, AM_IMM_S_8, 2, 3, 0),
-    INST(op_ADD_16, AM_REG_HL, AM_REG_DE, 1, 2, 0),
-    INST(op_LD_8, AM_REG_A, AM_MEM_DE, 1, 2, 0),
-    INST(op_DEC_16, AM_REG_DE, AM_NONE, 1, 2, 0),
+    [0x18] = INST(op_JR, JM_UNCOND, AM_IMM_S_8, 2, 3, 0),
+    [0x19] = INST(op_ADD_16, AM_REG_HL, AM_REG_DE, 1, 2, 0),
+    [0x1A] = INST(op_LD_8, AM_REG_A, AM_MEM_DE, 1, 2, 0),
+    [0x1B] = INST(op_DEC_16, AM_REG_DE, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_E, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_E, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_E, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RRA, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x1C] = INST(op_INC_8, AM_REG_E, AM_NONE, 1, 1, 0),
+    [0x1D] = INST(op_DEC_8, AM_REG_E, AM_NONE, 1, 1, 0),
+    [0x1E] = INST(op_LD_8, AM_REG_E, AM_IMM_D_8, 2, 2, 0),
+    [0x1F] = INST(op_RRA, AM_NONE, AM_NONE, 1, 1, 0),
 
     /* 0x20 - 0x2F */
-    INST(op_JR, JM_COND_NZ, AM_IMM_S_8, 2, 3, 2),
-    INST(op_LD_16, AM_REG_HL, AM_IMM_D_16, 3, 3, 0),
-    INST(op_LD_8, AM_MEM_HL_INC, AM_REG_A, 1, 2, 0),
-    INST(op_INC_16, AM_REG_HL, AM_NONE, 1, 2, 0),
+    [0x20] = INST(op_JR, JM_COND_NZ, AM_IMM_S_8, 2, 3, 2),
+    [0x21] = INST(op_LD_16, AM_REG_HL, AM_IMM_D_16, 3, 3, 0),
+    [0x22] = INST(op_LD_8, AM_MEM_HL_INC, AM_REG_A, 1, 2, 0),
+    [0x23] = INST(op_INC_16, AM_REG_HL, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_H, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_H, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_H, AM_IMM_D_8, 2, 2, 0),
-    INST(op_DAA, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x24] = INST(op_INC_8, AM_REG_H, AM_NONE, 1, 1, 0),
+    [0x25] = INST(op_DEC_8, AM_REG_H, AM_NONE, 1, 1, 0),
+    [0x26] = INST(op_LD_8, AM_REG_H, AM_IMM_D_8, 2, 2, 0),
+    [0x27] = INST(op_DAA, AM_NONE, AM_NONE, 1, 1, 0),
 
-    INST(op_JR, JM_COND_Z, AM_IMM_S_8, 2, 3, 2),
-    INST(op_ADD_16, AM_REG_HL, AM_REG_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_A, AM_MEM_HL_INC, 1, 2, 0),
-    INST(op_DEC_16, AM_REG_HL, AM_NONE, 1, 2, 0),
+    [0x28] = INST(op_JR, JM_COND_Z, AM_IMM_S_8, 2, 3, 2),
+    [0x29] = INST(op_ADD_16, AM_REG_HL, AM_REG_HL, 1, 2, 0),
+    [0x2A] = INST(op_LD_8, AM_REG_A, AM_MEM_HL_INC, 1, 2, 0),
+    [0x2B] = INST(op_DEC_16, AM_REG_HL, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_L, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_L, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_L, AM_IMM_D_8, 2, 2, 0),
-    INST(op_CPL, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x2C] = INST(op_INC_8, AM_REG_L, AM_NONE, 1, 1, 0),
+    [0x2D] = INST(op_DEC_8, AM_REG_L, AM_NONE, 1, 1, 0),
+    [0x2E] = INST(op_LD_8, AM_REG_L, AM_IMM_D_8, 2, 2, 0),
+    [0x2F] = INST(op_CPL, AM_NONE, AM_NONE, 1, 1, 0),
 
     /* 0x30 - 0x3F */
-    INST(op_JR, JM_COND_NC, AM_IMM_S_8, 2, 3, 2),
-    INST(op_LD_16, AM_REG_SP, AM_IMM_D_16, 3, 3, 0),
-    INST(op_LD_8, AM_MEM_HL_DEC, AM_REG_A, 1, 2, 0),
-    INST(op_INC_16, AM_REG_SP, AM_NONE, 1, 2, 0),
+    [0x30] = INST(op_JR, JM_COND_NC, AM_IMM_S_8, 2, 3, 2),
+    [0x31] = INST(op_LD_16, AM_REG_SP, AM_IMM_D_16, 3, 3, 0),
+    [0x32] = INST(op_LD_8, AM_MEM_HL_DEC, AM_REG_A, 1, 2, 0),
+    [0x33] = INST(op_INC_16, AM_REG_SP, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_MEM_HL, AM_NONE, 1, 3, 0),
-    INST(op_DEC_8, AM_MEM_HL, AM_NONE, 1, 3, 0),
-    INST(op_LD_8, AM_MEM_HL, AM_IMM_D_8, 2, 3, 0),
-    INST(op_SCF, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x34] = INST(op_INC_8, AM_MEM_HL, AM_NONE, 1, 3, 0),
+    [0x35] = INST(op_DEC_8, AM_MEM_HL, AM_NONE, 1, 3, 0),
+    [0x36] = INST(op_LD_8, AM_MEM_HL, AM_IMM_D_8, 2, 3, 0),
+    [0x37] = INST(op_SCF, AM_NONE, AM_NONE, 1, 1, 0),
 
-    INST(op_JR, JM_COND_C, AM_IMM_S_8, 2, 3, 2),
-    INST(op_ADD_16, AM_REG_HL, AM_REG_SP, 1, 2, 0),
-    INST(op_LD_8, AM_REG_A, AM_MEM_HL_DEC, 1, 2, 0),
-    INST(op_DEC_16, AM_REG_SP, AM_NONE, 1, 2, 0),
+    [0x38] = INST(op_JR, JM_COND_C, AM_IMM_S_8, 2, 3, 2),
+    [0x39] = INST(op_ADD_16, AM_REG_HL, AM_REG_SP, 1, 2, 0),
+    [0x3A] = INST(op_LD_8, AM_REG_A, AM_MEM_HL_DEC, 1, 2, 0),
+    [0x3B] = INST(op_DEC_16, AM_REG_SP, AM_NONE, 1, 2, 0),
 
-    INST(op_INC_8, AM_REG_A, AM_NONE, 1, 1, 0),
-    INST(op_DEC_8, AM_REG_A, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_CCF, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x3C] = INST(op_INC_8, AM_REG_A, AM_NONE, 1, 1, 0),
+    [0x3D] = INST(op_DEC_8, AM_REG_A, AM_NONE, 1, 1, 0),
+    [0x3E] = INST(op_LD_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0x3F] = INST(op_CCF, AM_NONE, AM_NONE, 1, 1, 0),
 
     /* 0x40 - 0x4F */
-    INST(op_LD_8, AM_REG_B, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_B, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_B, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_B, AM_REG_E, 1, 1, 0),
+    [0x40] = INST(op_LD_8, AM_REG_B, AM_REG_B, 1, 1, 0),
+    [0x41] = INST(op_LD_8, AM_REG_B, AM_REG_C, 1, 1, 0),
+    [0x42] = INST(op_LD_8, AM_REG_B, AM_REG_D, 1, 1, 0),
+    [0x43] = INST(op_LD_8, AM_REG_B, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_B, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_B, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_B, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_B, AM_REG_A, 1, 1, 0),
+    [0x44] = INST(op_LD_8, AM_REG_B, AM_REG_H, 1, 1, 0),
+    [0x45] = INST(op_LD_8, AM_REG_B, AM_REG_L, 1, 1, 0),
+    [0x46] = INST(op_LD_8, AM_REG_B, AM_MEM_HL, 1, 2, 0),
+    [0x47] = INST(op_LD_8, AM_REG_B, AM_REG_A, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_C, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_C, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_C, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_C, AM_REG_E, 1, 1, 0),
+    [0x48] = INST(op_LD_8, AM_REG_C, AM_REG_B, 1, 1, 0),
+    [0x49] = INST(op_LD_8, AM_REG_C, AM_REG_C, 1, 1, 0),
+    [0x4A] = INST(op_LD_8, AM_REG_C, AM_REG_D, 1, 1, 0),
+    [0x4B] = INST(op_LD_8, AM_REG_C, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_C, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_C, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_C, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_C, AM_REG_A, 1, 1, 0),
+    [0x4C] = INST(op_LD_8, AM_REG_C, AM_REG_H, 1, 1, 0),
+    [0x4D] = INST(op_LD_8, AM_REG_C, AM_REG_L, 1, 1, 0),
+    [0x4E] = INST(op_LD_8, AM_REG_C, AM_MEM_HL, 1, 2, 0),
+    [0x4F] = INST(op_LD_8, AM_REG_C, AM_REG_A, 1, 1, 0),
 
     /* 0x50 - 0x5F */
-    INST(op_LD_8, AM_REG_D, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_D, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_D, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_D, AM_REG_E, 1, 1, 0),
+    [0x50] = INST(op_LD_8, AM_REG_D, AM_REG_B, 1, 1, 0),
+    [0x51] = INST(op_LD_8, AM_REG_D, AM_REG_C, 1, 1, 0),
+    [0x52] = INST(op_LD_8, AM_REG_D, AM_REG_D, 1, 1, 0),
+    [0x53] = INST(op_LD_8, AM_REG_D, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_D, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_D, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_D, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_D, AM_REG_A, 1, 1, 0),
+    [0x54] = INST(op_LD_8, AM_REG_D, AM_REG_H, 1, 1, 0),
+    [0x55] = INST(op_LD_8, AM_REG_D, AM_REG_L, 1, 1, 0),
+    [0x56] = INST(op_LD_8, AM_REG_D, AM_MEM_HL, 1, 2, 0),
+    [0x57] = INST(op_LD_8, AM_REG_D, AM_REG_A, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_E, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_E, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_E, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_E, AM_REG_E, 1, 1, 0),
+    [0x58] = INST(op_LD_8, AM_REG_E, AM_REG_B, 1, 1, 0),
+    [0x59] = INST(op_LD_8, AM_REG_E, AM_REG_C, 1, 1, 0),
+    [0x5A] = INST(op_LD_8, AM_REG_E, AM_REG_D, 1, 1, 0),
+    [0x5B] = INST(op_LD_8, AM_REG_E, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_E, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_E, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_E, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_E, AM_REG_A, 1, 1, 0),
+    [0x5C] = INST(op_LD_8, AM_REG_E, AM_REG_H, 1, 1, 0),
+    [0x5D] = INST(op_LD_8, AM_REG_E, AM_REG_L, 1, 1, 0),
+    [0x5E] = INST(op_LD_8, AM_REG_E, AM_MEM_HL, 1, 2, 0),
+    [0x5F] = INST(op_LD_8, AM_REG_E, AM_REG_A, 1, 1, 0),
 
     /* 0x60 - 0x6F */
-    INST(op_LD_8, AM_REG_H, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_H, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_H, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_H, AM_REG_E, 1, 1, 0),
+    [0x60] = INST(op_LD_8, AM_REG_H, AM_REG_B, 1, 1, 0),
+    [0x61] = INST(op_LD_8, AM_REG_H, AM_REG_C, 1, 1, 0),
+    [0x62] = INST(op_LD_8, AM_REG_H, AM_REG_D, 1, 1, 0),
+    [0x63] = INST(op_LD_8, AM_REG_H, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_H, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_H, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_H, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_H, AM_REG_A, 1, 1, 0),
+    [0x64] = INST(op_LD_8, AM_REG_H, AM_REG_H, 1, 1, 0),
+    [0x65] = INST(op_LD_8, AM_REG_H, AM_REG_L, 1, 1, 0),
+    [0x66] = INST(op_LD_8, AM_REG_H, AM_MEM_HL, 1, 2, 0),
+    [0x67] = INST(op_LD_8, AM_REG_H, AM_REG_A, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_L, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_L, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_L, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_L, AM_REG_E, 1, 1, 0),
+    [0x68] = INST(op_LD_8, AM_REG_L, AM_REG_B, 1, 1, 0),
+    [0x69] = INST(op_LD_8, AM_REG_L, AM_REG_C, 1, 1, 0),
+    [0x6A] = INST(op_LD_8, AM_REG_L, AM_REG_D, 1, 1, 0),
+    [0x6B] = INST(op_LD_8, AM_REG_L, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_L, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_L, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_L, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_L, AM_REG_A, 1, 1, 0),
+    [0x6C] = INST(op_LD_8, AM_REG_L, AM_REG_H, 1, 1, 0),
+    [0x6D] = INST(op_LD_8, AM_REG_L, AM_REG_L, 1, 1, 0),
+    [0x6E] = INST(op_LD_8, AM_REG_L, AM_MEM_HL, 1, 2, 0),
+    [0x6F] = INST(op_LD_8, AM_REG_L, AM_REG_A, 1, 1, 0),
 
     /* 0x70 - 0x7F */
-    INST(op_LD_8, AM_MEM_HL, AM_REG_B, 1, 2, 0),
-    INST(op_LD_8, AM_MEM_HL, AM_REG_C, 1, 2, 0),
-    INST(op_LD_8, AM_MEM_HL, AM_REG_D, 1, 2, 0),
-    INST(op_LD_8, AM_MEM_HL, AM_REG_E, 1, 2, 0),
+    [0x70] = INST(op_LD_8, AM_MEM_HL, AM_REG_B, 1, 2, 0),
+    [0x71] = INST(op_LD_8, AM_MEM_HL, AM_REG_C, 1, 2, 0),
+    [0x72] = INST(op_LD_8, AM_MEM_HL, AM_REG_D, 1, 2, 0),
+    [0x73] = INST(op_LD_8, AM_MEM_HL, AM_REG_E, 1, 2, 0),
 
-    INST(op_LD_8, AM_MEM_HL, AM_REG_H, 1, 2, 0),
-    INST(op_LD_8, AM_MEM_HL, AM_REG_L, 1, 2, 0),
-    INST(op_HALT, AM_NONE, AM_NONE, 1, 1, 0),
-    INST(op_LD_8, AM_MEM_HL, AM_REG_A, 1, 2, 0),
+    [0x74] = INST(op_LD_8, AM_MEM_HL, AM_REG_H, 1, 2, 0),
+    [0x75] = INST(op_LD_8, AM_MEM_HL, AM_REG_L, 1, 2, 0),
+    [0x76] = INST(op_HALT, AM_NONE, AM_NONE, 1, 1, 0),
+    [0x77] = INST(op_LD_8, AM_MEM_HL, AM_REG_A, 1, 2, 0),
 
-    INST(op_LD_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_LD_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_LD_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_LD_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0x78] = INST(op_LD_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0x79] = INST(op_LD_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0x7A] = INST(op_LD_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0x7B] = INST(op_LD_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_LD_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_LD_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_LD_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0x7C] = INST(op_LD_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0x7D] = INST(op_LD_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0x7E] = INST(op_LD_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0x7F] = INST(op_LD_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
     /* 0x80 - 0x8F */
-    INST(op_ADD_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_ADD_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_ADD_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_ADD_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0x80] = INST(op_ADD_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0x81] = INST(op_ADD_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0x82] = INST(op_ADD_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0x83] = INST(op_ADD_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_ADD_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_ADD_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_ADD_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_ADD_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0x84] = INST(op_ADD_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0x85] = INST(op_ADD_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0x86] = INST(op_ADD_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0x87] = INST(op_ADD_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
-    INST(op_ADC_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_ADC_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_ADC_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_ADC_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0x88] = INST(op_ADC_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0x89] = INST(op_ADC_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0x8A] = INST(op_ADC_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0x8B] = INST(op_ADC_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_ADC_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_ADC_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_ADC_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_ADC_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0x8C] = INST(op_ADC_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0x8D] = INST(op_ADC_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0x8E] = INST(op_ADC_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0x8F] = INST(op_ADC_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
     /* 0x90 - 0x9F */
-    INST(op_SUB_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_SUB_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_SUB_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_SUB_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0x90] = INST(op_SUB_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0x91] = INST(op_SUB_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0x92] = INST(op_SUB_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0x93] = INST(op_SUB_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_SUB_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_SUB_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_SUB_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_SUB_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0x94] = INST(op_SUB_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0x95] = INST(op_SUB_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0x96] = INST(op_SUB_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0x97] = INST(op_SUB_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
-    INST(op_SBC_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_SBC_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_SBC_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_SBC_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0x98] = INST(op_SBC_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0x99] = INST(op_SBC_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0x9A] = INST(op_SBC_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0x9B] = INST(op_SBC_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_SBC_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_SBC_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_SBC_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_SBC_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0x9C] = INST(op_SBC_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0x9D] = INST(op_SBC_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0x9E] = INST(op_SBC_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0x9F] = INST(op_SBC_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
     /* 0xA0 - 0xAF */
-    INST(op_AND_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_AND_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_AND_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_AND_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0xA0] = INST(op_AND_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0xA1] = INST(op_AND_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0xA2] = INST(op_AND_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0xA3] = INST(op_AND_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_AND_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_AND_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_AND_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_AND_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0xA4] = INST(op_AND_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0xA5] = INST(op_AND_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0xA6] = INST(op_AND_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0xA7] = INST(op_AND_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
-    INST(op_XOR_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_XOR_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_XOR_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_XOR_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0xA8] = INST(op_XOR_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0xA9] = INST(op_XOR_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0xAA] = INST(op_XOR_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0xAB] = INST(op_XOR_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_XOR_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_XOR_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_XOR_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_XOR_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0xAC] = INST(op_XOR_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0xAD] = INST(op_XOR_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0xAE] = INST(op_XOR_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0xAF] = INST(op_XOR_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
     /* 0xB0 - 0xBF */
-    INST(op_OR_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_OR_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_OR_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_OR_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0xB0] = INST(op_OR_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0xB1] = INST(op_OR_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0xB2] = INST(op_OR_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0xB3] = INST(op_OR_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_OR_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_OR_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_OR_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_OR_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0xB4] = INST(op_OR_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0xB5] = INST(op_OR_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0xB6] = INST(op_OR_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0xB7] = INST(op_OR_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
-    INST(op_CP_8, AM_REG_A, AM_REG_B, 1, 1, 0),
-    INST(op_CP_8, AM_REG_A, AM_REG_C, 1, 1, 0),
-    INST(op_CP_8, AM_REG_A, AM_REG_D, 1, 1, 0),
-    INST(op_CP_8, AM_REG_A, AM_REG_E, 1, 1, 0),
+    [0xB8] = INST(op_CP_8, AM_REG_A, AM_REG_B, 1, 1, 0),
+    [0xB9] = INST(op_CP_8, AM_REG_A, AM_REG_C, 1, 1, 0),
+    [0xBA] = INST(op_CP_8, AM_REG_A, AM_REG_D, 1, 1, 0),
+    [0xBB] = INST(op_CP_8, AM_REG_A, AM_REG_E, 1, 1, 0),
 
-    INST(op_CP_8, AM_REG_A, AM_REG_H, 1, 1, 0),
-    INST(op_CP_8, AM_REG_A, AM_REG_L, 1, 1, 0),
-    INST(op_CP_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
-    INST(op_CP_8, AM_REG_A, AM_REG_A, 1, 1, 0),
+    [0xBC] = INST(op_CP_8, AM_REG_A, AM_REG_H, 1, 1, 0),
+    [0xBD] = INST(op_CP_8, AM_REG_A, AM_REG_L, 1, 1, 0),
+    [0xBE] = INST(op_CP_8, AM_REG_A, AM_MEM_HL, 1, 2, 0),
+    [0xBF] = INST(op_CP_8, AM_REG_A, AM_REG_A, 1, 1, 0),
 
     /* 0xC0 - 0xCF */
-    INST(op_RET, JM_COND_NZ, AM_NONE, 1, 5, 2),
-    INST(op_POP, AM_REG_BC, AM_NONE, 1, 3, 0),
-    INST(op_JP, JM_COND_NZ, AM_IMM_A_16, 3, 4, 3),
-    INST(op_JP, JM_UNCOND, AM_IMM_A_16, 3, 4, 0),
+    [0xC0] = INST(op_RET, JM_COND_NZ, AM_NONE, 1, 5, 2),
+    [0xC1] = INST(op_POP, AM_REG_BC, AM_NONE, 1, 3, 0),
+    [0xC2] = INST(op_JP, JM_COND_NZ, AM_IMM_A_16, 3, 4, 3),
+    [0xC3] = INST(op_JP, JM_UNCOND, AM_IMM_A_16, 3, 4, 0),
 
-    INST(op_CALL, JM_COND_NZ, AM_IMM_A_16, 3, 6, 3),
-    INST(op_PUSH, AM_REG_BC, AM_NONE, 1, 4, 0),
-    INST(op_ADD_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_0, AM_NONE, 1, 4, 0),
+    [0xC4] = INST(op_CALL, JM_COND_NZ, AM_IMM_A_16, 3, 6, 3),
+    [0xC5] = INST(op_PUSH, AM_REG_BC, AM_NONE, 1, 4, 0),
+    [0xC6] = INST(op_ADD_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xC7] = INST(op_RST, RST_VEC_0, AM_NONE, 1, 4, 0),
 
-    INST(op_RET, JM_COND_Z, AM_NONE, 1, 5, 2),
-    INST(op_RET, JM_UNCOND, AM_NONE, 1, 4, 0),
-    INST(op_JP, JM_COND_Z, AM_IMM_A_16, 3, 4, 3),
-    INST(op_PRCB, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xC8] = INST(op_RET, JM_COND_Z, AM_NONE, 1, 5, 2),
+    [0xC9] = INST(op_RET, JM_UNCOND, AM_NONE, 1, 4, 0),
+    [0xCA] = INST(op_JP, JM_COND_Z, AM_IMM_A_16, 3, 4, 3),
+    [0xCB] = INST(op_PRCB, AM_NONE, AM_NONE, 1, 0, 0),
 
-    INST(op_CALL, JM_COND_Z, AM_IMM_A_16, 3, 6, 3),
-    INST(op_CALL, JM_UNCOND, AM_IMM_A_16, 3, 6, 0),
-    INST(op_ADC_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_1, AM_NONE, 1, 4, 0),
+    [0xCC] = INST(op_CALL, JM_COND_Z, AM_IMM_A_16, 3, 6, 3),
+    [0xCD] = INST(op_CALL, JM_UNCOND, AM_IMM_A_16, 3, 6, 0),
+    [0xCE] = INST(op_ADC_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xCF] = INST(op_RST, RST_VEC_1, AM_NONE, 1, 4, 0),
 
     /* 0xD0 - 0xDF */
-    INST(op_RET, JM_COND_NC, AM_NONE, 1, 5, 2),
-    INST(op_POP, AM_REG_DE, AM_NONE, 1, 3, 0),
-    INST(op_JP, JM_COND_NC, AM_IMM_A_16, 3, 4, 3),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xD0] = INST(op_RET, JM_COND_NC, AM_NONE, 1, 5, 2),
+    [0xD1] = INST(op_POP, AM_REG_DE, AM_NONE, 1, 3, 0),
+    [0xD2] = INST(op_JP, JM_COND_NC, AM_IMM_A_16, 3, 4, 3),
+    [0xD3] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
 
-    INST(op_CALL, JM_COND_NC, AM_IMM_A_16, 3, 6, 3),
-    INST(op_PUSH, AM_REG_DE, AM_NONE, 1, 4, 0),
-    INST(op_SUB_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_2, AM_NONE, 1, 4, 0),
+    [0xD4] = INST(op_CALL, JM_COND_NC, AM_IMM_A_16, 3, 6, 3),
+    [0xD5] = INST(op_PUSH, AM_REG_DE, AM_NONE, 1, 4, 0),
+    [0xD6] = INST(op_SUB_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xD7] = INST(op_RST, RST_VEC_2, AM_NONE, 1, 4, 0),
 
-    INST(op_RET, JM_COND_C, AM_NONE, 1, 5, 2),
-    INST(op_RETI, AM_NONE, AM_NONE, 1, 4, 0),
-    INST(op_JP, JM_COND_C, AM_IMM_A_16, 3, 4, 3),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xD8] = INST(op_RET, JM_COND_C, AM_NONE, 1, 5, 2),
+    [0xD9] = INST(op_RETI, AM_NONE, AM_NONE, 1, 4, 0),
+    [0xDA] = INST(op_JP, JM_COND_C, AM_IMM_A_16, 3, 4, 3),
+    [0xDB] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
 
-    INST(op_CALL, JM_COND_C, AM_IMM_A_16, 3, 6, 3),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_SBC_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_3, AM_NONE, 1, 4, 0),
+    [0xDC] = INST(op_CALL, JM_COND_C, AM_IMM_A_16, 3, 6, 3),
+    [0xDD] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xDE] = INST(op_SBC_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xDF] = INST(op_RST, RST_VEC_3, AM_NONE, 1, 4, 0),
 
     /* 0xE0 - 0xEF */
-    INST(op_LD_8, AM_IMM_FF_A_8, AM_REG_A, 2, 3, 0),
-    INST(op_POP, AM_REG_HL, AM_NONE, 1, 3, 0),
-    INST(op_LD_8, AM_MEM_FF_REG_C, AM_REG_A, 1, 2, 0),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xE0] = INST(op_LD_8, AM_IMM_FF_A_8, AM_REG_A, 2, 3, 0),
+    [0xE1] = INST(op_POP, AM_REG_HL, AM_NONE, 1, 3, 0),
+    [0xE2] = INST(op_LD_8, AM_MEM_FF_REG_C, AM_REG_A, 1, 2, 0),
+    [0xE3] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
 
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_PUSH, AM_REG_HL, AM_NONE, 1, 4, 0),
-    INST(op_AND_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_4, AM_NONE, 1, 4, 0),
+    [0xE4] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xE5] = INST(op_PUSH, AM_REG_HL, AM_NONE, 1, 4, 0),
+    [0xE6] = INST(op_AND_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xE7] = INST(op_RST, RST_VEC_4, AM_NONE, 1, 4, 0),
 
-    INST(op_ADD_16, AM_REG_SP, AM_IMM_S_8, 2, 4, 0),
-    INST(op_JP, JM_UNCOND, AM_REG_HL, 1, 1, 0),
-    INST(op_LD_8, AM_IMM_A_16, AM_REG_A, 3, 4, 0),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xE8] = INST(op_ADD_16, AM_REG_SP, AM_IMM_S_8, 2, 4, 0),
+    [0xE9] = INST(op_JP, JM_UNCOND, AM_REG_HL, 1, 1, 0),
+    [0xEA] = INST(op_LD_8, AM_IMM_A_16, AM_REG_A, 3, 4, 0),
+    [0xEB] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
 
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_XOR_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_5, AM_NONE, 1, 4, 0),
+    [0xEC] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xED] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xEE] = INST(op_XOR_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xEF] = INST(op_RST, RST_VEC_5, AM_NONE, 1, 4, 0),
 
     /* 0xF0 - 0xFF */
-    INST(op_LD_8, AM_REG_A, AM_IMM_FF_A_8, 2, 3, 0),
-    INST(op_POP, AM_REG_AF, AM_NONE, 1, 3, 0),
-    INST(op_LD_8, AM_REG_A, AM_MEM_FF_REG_C, 1, 2, 0),
-    INST(op_DI, AM_NONE, AM_NONE, 1, 1, 0),
+    [0xF0] = INST(op_LD_8, AM_REG_A, AM_IMM_FF_A_8, 2, 3, 0),
+    [0xF1] = INST(op_POP, AM_REG_AF, AM_NONE, 1, 3, 0),
+    [0xF2] = INST(op_LD_8, AM_REG_A, AM_MEM_FF_REG_C, 1, 2, 0),
+    [0xF3] = INST(op_DI, AM_NONE, AM_NONE, 1, 1, 0),
 
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_PUSH, AM_REG_AF, AM_NONE, 1, 4, 0),
-    INST(op_OR_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_6, AM_NONE, 1, 4, 0),
+    [0xF4] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xF5] = INST(op_PUSH, AM_REG_AF, AM_NONE, 1, 4, 0),
+    [0xF6] = INST(op_OR_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xF7] = INST(op_RST, RST_VEC_6, AM_NONE, 1, 4, 0),
 
-    INST(op_LD_16, AM_REG_HL, AM_REG_SP_IMM_S8, 2, 3, 0),
-    INST(op_LD_16, AM_REG_SP, AM_REG_HL, 1, 2, 0),
-    INST(op_LD_8, AM_REG_A, AM_IMM_A_16, 3, 4, 0),
-    INST(op_EI, AM_NONE, AM_NONE, 1, 1, 0), // TODO: implement EI
+    [0xF8] = INST(op_LD_16, AM_REG_HL, AM_REG_SP_IMM_S8, 2, 3, 0),
+    [0xF9] = INST(op_LD_16, AM_REG_SP, AM_REG_HL, 1, 2, 0),
+    [0xFA] = INST(op_LD_8, AM_REG_A, AM_IMM_A_16, 3, 4, 0),
+    [0xFB] = INST(op_EI, AM_NONE, AM_NONE, 1, 1, 0),
 
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
-    INST(op_CP_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
-    INST(op_RST, RST_VEC_7, AM_NONE, 1, 4, 0),
+    [0xFC] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xFD] = INST(op_NOT_IMPL, AM_NONE, AM_NONE, 1, 0, 0),
+    [0xFE] = INST(op_CP_8, AM_REG_A, AM_IMM_D_8, 2, 2, 0),
+    [0xFF] = INST(op_RST, RST_VEC_7, AM_NONE, 1, 4, 0),
 };
+
+status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(state);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(param);
+
+  memset(state, 0, sizeof(cpu_state_t));
+  state->registers.pc = ENTRY_PT_ADDR;
+  state->run_mode = RUN_MODE_NORMAL;
+  state->registers.f = 0x00;
+  state->ime_flag = 1;
+  state->bus_interface.read = param->bus_read_fn;
+  state->bus_interface.write = param->bus_write_fn;
+  state->bus_interface.resource = param->bus_resource;
+
+  return STATUS_OK;
+}
 
 status_code_t cpu_emulation_cycle(cpu_state_t *const state)
 {
@@ -542,7 +563,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
   registers_t *const regs = &state->registers;
   uint8_t opcode;
 
-  status = mem_read_8(regs->pc++, &opcode);
+  status = bus_read_8(state, regs->pc++, &opcode);
   RETURN_STATUS_IF_NOT_OK(status);
 
   instruction_t *const inst = &inst_table[opcode];
@@ -606,6 +627,34 @@ reg_16_ptr_t reg_16_select(cpu_state_t *const state, addressing_mode_t const add
   return NULL;
 }
 
+static inline status_code_t bus_read_8(cpu_state_t *const state, uint16_t address, uint8_t *const data)
+{
+  return state->bus_interface.read(state->bus_interface.resource, address, data);
+}
+
+static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t address, uint8_t const data)
+{
+  return state->bus_interface.write(state->bus_interface.resource, address, data);
+}
+
+static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t address, uint16_t *const data)
+{
+  uint8_t lsb, msb;
+  status_code_t status;
+  status = state->bus_interface.read(state->bus_interface.resource, address, &lsb);
+  status = state->bus_interface.read(state->bus_interface.resource, address + 1, &msb);
+  *data = (msb << 8) | lsb;
+  return status;
+}
+
+static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data)
+{
+  status_code_t status;
+  status = state->bus_interface.write(state->bus_interface.resource, address, (data & 0xFF));
+  status = state->bus_interface.write(state->bus_interface.resource, address + 1, (data >> 8) & 0xFF);
+  return status;
+}
+
 status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t *const data)
 {
   address_t address;
@@ -617,24 +666,24 @@ status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode
   {
   case AM_IMM_D_8:
   case AM_IMM_S_8:
-    return mem_read_8(regs->pc++, data);
+    return bus_read_8(state, regs->pc++, data);
   case AM_MEM_HL:
   case AM_MEM_HL_INC:
   case AM_MEM_HL_DEC:
-    return mem_read_8(regs->hl, data);
+    return bus_read_8(state, regs->hl, data);
   case AM_MEM_BC:
-    return mem_read_8(regs->bc, data);
+    return bus_read_8(state, regs->bc, data);
   case AM_MEM_DE:
-    return mem_read_8(regs->de, data);
+    return bus_read_8(state, regs->de, data);
   case AM_MEM_FF_REG_C:
-    return mem_read_8((0xFF00 | regs->c), data);
+    return bus_read_8(state, (0xFF00 | regs->c), data);
   case AM_IMM_FF_A_8:
-    status = mem_read_8(regs->pc++, &address.lsb); /* TODO check status */
-    status = mem_read_8((0xFF00 | address.lsb), data);
+    status = bus_read_8(state, regs->pc++, &address.lsb); /* TODO check status */
+    status = bus_read_8(state, (0xFF00 | address.lsb), data);
     return status;
   case AM_IMM_A_16:
     status = read_16(state, addr_mode, &address.val); /* TODO check status */
-    status = mem_read_8(address.val, data);
+    status = bus_read_8(state, address.val, data);
     return status;
   default:
     if ((source = reg_8_select(state, addr_mode)) == NULL)
@@ -660,20 +709,20 @@ status_code_t write_8(cpu_state_t *const state, addressing_mode_t const addr_mod
   case AM_MEM_HL:
   case AM_MEM_HL_INC:
   case AM_MEM_HL_DEC:
-    return mem_write_8(regs->hl, data);
+    return bus_write_8(state, regs->hl, data);
   case AM_MEM_BC:
-    return mem_write_8(regs->bc, data);
+    return bus_write_8(state, regs->bc, data);
   case AM_MEM_DE:
-    return mem_write_8(regs->de, data);
+    return bus_write_8(state, regs->de, data);
   case AM_MEM_FF_REG_C:
-    return mem_write_8((0xFF00 | regs->c), data);
+    return bus_write_8(state, (0xFF00 | regs->c), data);
   case AM_IMM_FF_A_8:
-    status = mem_read_8(regs->pc++, &address.lsb); /* TODO check status */
-    status = mem_write_8((0xFF00 | address.lsb), data);
+    status = bus_read_8(state, regs->pc++, &address.lsb); /* TODO check status */
+    status = bus_write_8(state, (0xFF00 | address.lsb), data);
     return status;
   case AM_IMM_A_16:
     status = read_16(state, addr_mode, &address.val); /* TODO check status */
-    status = mem_write_8(address.val, data);
+    status = bus_write_8(state, address.val, data);
     return status;
   default:
     if ((source = reg_8_select(state, addr_mode)) == NULL)
@@ -697,7 +746,7 @@ status_code_t read_16(cpu_state_t *const state, addressing_mode_t const addr_mod
   {
   case AM_IMM_A_16:
   case AM_IMM_D_16:
-    status = mem_read_16(regs->pc, data);
+    status = bus_read_16(state, regs->pc, data);
     regs->pc += 2;
     return status;
   default:
@@ -719,8 +768,8 @@ status_code_t write_16(cpu_state_t *const state, addressing_mode_t const addr_mo
 
   if (addr_mode == AM_IMM_A_16)
   {
-    status = mem_read_16(state->registers.pc, &address);
-    status = mem_write_16(address, data);
+    status = bus_read_16(state, state->registers.pc, &address);
+    status = bus_write_16(state, address, data);
     state->registers.pc += 2;
   }
   else
@@ -739,7 +788,7 @@ status_code_t write_16(cpu_state_t *const state, addressing_mode_t const addr_mo
 status_code_t pop_reg_16(cpu_state_t *const state, reg_16_ptr_t reg)
 {
   status_code_t status = STATUS_OK;
-  status = mem_read_16(state->registers.sp, reg);
+  status = bus_read_16(state, state->registers.sp, reg);
   state->registers.sp += 2;
 
   return status;
@@ -748,7 +797,7 @@ status_code_t pop_reg_16(cpu_state_t *const state, reg_16_ptr_t reg)
 status_code_t push_reg_16(cpu_state_t *const state, reg_16_ptr_t reg)
 {
   state->registers.sp -= 2;
-  return mem_write_16(state->registers.sp, *reg);
+  return bus_write_16(state, state->registers.sp, *reg);
 }
 
 void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode)
@@ -1391,7 +1440,7 @@ status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribu
   status_code_t status = STATUS_OK;
   registers_t *const regs = &state->registers;
 
-  status = mem_read_8(regs->pc++, &cb_opcode);
+  status = bus_read_8(state, regs->pc++, &cb_opcode);
   RETURN_STATUS_IF_NOT_OK(status);
 
   uint8_t target_type = (cb_opcode & 0x7);
