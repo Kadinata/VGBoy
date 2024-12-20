@@ -6,13 +6,15 @@
 #include "cpu.h"
 #include "data_bus.h"
 #include "rom.h"
+#include "ram.h"
 #include "status_code.h"
 
 typedef struct
 {
   cpu_state_t cpu_state;
-  rom_handle_t rom;
   data_bus_handle_t bus_handle;
+  rom_handle_t rom;
+  ram_handle_t ram;
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);

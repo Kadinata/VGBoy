@@ -6,6 +6,7 @@
 #include "cpu.h"
 #include "logging.h"
 #include "emulator.h"
+#include <unistd.h>
 
 int main(int __attribute__((unused)) argc, char **argv)
 {
@@ -27,7 +28,11 @@ int main(int __attribute__((unused)) argc, char **argv)
 
   for (uint16_t i = 0; i < 100; i++)
   {
-    cpu_emulation_cycle(&emulator.cpu_state);
+    status = cpu_emulation_cycle(&emulator.cpu_state);
+    if (status != STATUS_OK)
+    {
+      break;
+    }
   }
 
   emulator_cleanup(&emulator);

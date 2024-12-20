@@ -8,6 +8,7 @@ SOURCES += core/src/rom.c
 SOURCES += main.c
 SOURCES += core/src/data_bus.c
 SOURCES += core/src/emulator.c
+SOURCES += core/src/ram.c
 
 HEADERS += core/include/logging.h
 HEADERS = core/include/cpu.h
@@ -16,6 +17,7 @@ HEADERS += core/include/rom.h
 HEADERS += core/include/status_code.h
 HEADERS += core/include/data_bus.h
 HEADERS += core/include/emulator.h
+HEADERS += core/include/ram.h
 
 OBJS = objects/core/cpu.o 
 OBJS += objects/core/memory.o
@@ -23,6 +25,7 @@ OBJS += objects/core/rom.o
 OBJS += objects/main.o
 OBJS += objects/core/data_bus.o
 OBJS += objects/core/emulator.o
+OBJS += objects/core/ram.o
 
 all: bin/gb_emu.out
 

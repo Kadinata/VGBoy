@@ -1,7 +1,18 @@
 #include "data_bus.h"
 
 #include <stdint.h>
+#include "logging.h"
 #include "status_code.h"
+
+static status_code_t unsupported_region_read(void *const resource, uint16_t const address, uint8_t *const data);
+static status_code_t unsupported_region_write(void *const resource, uint16_t const address, uint8_t const data);
+
+static data_bus_segment_t unsupported_region = (data_bus_segment_t){
+    .segment_type = -1,
+    .read_fn = unsupported_region_read,
+    .write_fn = unsupported_region_write,
+    .resource = NULL,
+};
 
 static data_bus_segment_t *get_bus_segment(data_bus_handle_t *const handle, uint16_t const address)
 {
@@ -14,6 +25,51 @@ static data_bus_segment_t *get_bus_segment(data_bus_handle_t *const handle, uint
   else if ((address >= 0x4000) && (address < 0x8000))
   {
     return &handle->segments[SEGMENT_TYPE_ROM_SWITCHABLE_BANK];
+  }
+  /* 0x8000 - 0x9FFF: Video RAM (VRAM) */
+  else if ((address >= 0x8000) && (address < 0xA000))
+  {
+    return &handle->segments[SEGMENT_TYPE_VRAM];
+  }
+  /* 0xA000 - 0xBFFF: External RAM */
+  else if ((address >= 0xA000) && (address < 0xC000))
+  {
+    return &handle->segments[SEGMENT_TYPE_EXT_RAM];
+  }
+  /* 0xC000 - 0xDFFF: Working RAM (WRAM) */
+  else if ((address >= 0xC000) && (address < 0xE000))
+  {
+    return &handle->segments[SEGMENT_TYPE_WRAM];
+  }
+  /* 0xE000 - 0xFDFF: Echo RAM (region not supported) */
+  else if ((address >= 0xE000) && (address < 0xFE00))
+  {
+    return &unsupported_region;
+  }
+  /* 0xFE00 - 0xFE9F: Object Attribute Memory (OAM) */
+  else if ((address >= 0xFE00) && (address < 0xFEA0))
+  {
+    return &handle->segments[SEGMENT_TYPE_OAM];
+  }
+  /* 0xFEA0 - 0xFEFF: Not usable */
+  else if ((address >= 0xFEA0) && (address < 0xFF00))
+  {
+    return &unsupported_region;
+  }
+  /* 0xFF00 - 0xFF7F: I/O Registers */
+  else if ((address >= 0xFF00) && (address < 0xFF80))
+  {
+    return &handle->segments[SEGMENT_TYPE_IO_REG];
+  }
+  /* 0xFF80 - 0xFFFE: High RAM (HRAM) */
+  else if ((address >= 0xFF80) && (address < 0xFFFF))
+  {
+    return &handle->segments[SEGMENT_TYPE_HRAM];
+  }
+  /* 0xFFFF: Interrupt Enable Register (IE) */
+  else if (address == 0xFFFF)
+  {
+    return &handle->segments[SEGMENT_TYPE_IE_REG];
   }
 
   return NULL;
@@ -55,7 +111,7 @@ status_code_t data_bus_read(data_bus_handle_t *const bus_handle, uint16_t const 
 
   if (bus_segment == NULL || bus_segment->read_fn == NULL)
   {
-    return STATUS_ERR_GENERIC; /** TODO: return specific error */
+    return STATUS_ERR_NOT_INITIALIZED;
   }
 
   bus_segment->read_fn(bus_segment->resource, address, data);
@@ -70,9 +126,22 @@ status_code_t data_bus_write(data_bus_handle_t *const bus_handle, uint16_t const
 
   if (bus_segment == NULL || bus_segment->write_fn == NULL)
   {
-    return STATUS_ERR_GENERIC; /** TODO: return specific error */
+    return STATUS_ERR_NOT_INITIALIZED;
   }
 
   bus_segment->write_fn(bus_segment->resource, address, data);
+  return STATUS_OK;
+}
+
+static status_code_t unsupported_region_read(void *const __attribute__((unused)) resource, uint16_t const address, uint8_t *const data)
+{
+  Log_E("Attempted read from an unsupported address: 0x%04X", address);
+  *data = 0;
+  return STATUS_OK;
+}
+
+static status_code_t unsupported_region_write(void *const __attribute__((unused)) resource, uint16_t const address, uint8_t const __attribute__((unused)) data)
+{
+  Log_E("Attempted write to an unsupported address: 0x%04X", address);
   return STATUS_OK;
 }
