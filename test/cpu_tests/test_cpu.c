@@ -1,6 +1,5 @@
 #include "unity.h"
 #include "cpu.h"
-#include "sys_def.h"
 #include "status_code.h"
 
 #include "mock_memory.h"

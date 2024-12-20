@@ -1,6 +1,5 @@
 #include "unity.h"
 #include "cpu.h"
-#include "sys_def.h"
 #include "status_code.h"
 
 #include "cpu_test_helper.h"
@@ -64,7 +63,7 @@ void stub_test_PUSH_REG(uint8_t opcode, cpu_state_t *state, uint16_t *reg)
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
 
   /* Push the register's value onto the stack */
-  mem_write_16_ExpectAndReturn(initial_sp - 2, data, STATUS_OK);
+  stub_mem_write_16(initial_sp - 2, data);
 
   /* Execute the instruction */
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
@@ -115,7 +114,7 @@ void test_LD_a16_SP(void)
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
   stub_mem_read_16(TEST_PC_INIT_VALUE + 1, &address);
-  mem_write_16_ExpectAndReturn(address, 0x5678, STATUS_OK);
+  stub_mem_write_16(address, 0x5678);
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
 

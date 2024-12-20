@@ -1,6 +1,5 @@
 #include "unity.h"
 #include "cpu.h"
-#include "sys_def.h"
 #include "status_code.h"
 
 #include "mock_memory.h"
@@ -102,7 +101,7 @@ void stub_test_CALL_expect_jump(uint8_t opcode, cpu_state_t *state, uint8_t flag
   stub_mem_read_16(TEST_PC_INIT_VALUE + 1, &address);
 
   /* Push PC onto the stack */
-  mem_write_16_ExpectAndReturn(initial_sp - 2, TEST_PC_INIT_VALUE + 3, STATUS_OK);
+  stub_mem_write_16(initial_sp - 2, TEST_PC_INIT_VALUE + 3);
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
 
@@ -177,7 +176,7 @@ void stub_test_RST(uint8_t opcode, cpu_state_t *state, uint16_t reset_vector)
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
 
   /* Push PC onto the stack */
-  mem_write_16_ExpectAndReturn(initial_sp - 2, TEST_PC_INIT_VALUE + 1, STATUS_OK);
+  stub_mem_write_16(initial_sp - 2, TEST_PC_INIT_VALUE + 1);
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
   TEST_ASSERT_EQUAL_HEX16(reset_vector, state->registers.pc);
