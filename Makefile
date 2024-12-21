@@ -8,6 +8,9 @@ SOURCES += main.c
 SOURCES += core/src/data_bus.c
 SOURCES += core/src/emulator.c
 SOURCES += core/src/ram.c
+SOURCES += core/src/io.c
+SOURCES += core/src/interrupt.c
+SOURCES += core/src/timer.c
 
 HEADERS += core/include/logging.h
 HEADERS = core/include/cpu.h
@@ -17,6 +20,8 @@ HEADERS += core/include/data_bus.h
 HEADERS += core/include/emulator.h
 HEADERS += core/include/ram.h
 HEADERS += core/include/interrupt.h
+HEADERS += core/include/io.h
+HEADERS += core/include/timer.h
 
 OBJS = objects/core/cpu.o 
 OBJS += objects/core/rom.o
@@ -24,6 +29,9 @@ OBJS += objects/main.o
 OBJS += objects/core/data_bus.o
 OBJS += objects/core/emulator.o
 OBJS += objects/core/ram.o
+OBJS += objects/core/io.o
+OBJS += objects/core/interrupt.o
+OBJS += objects/core/timer.o
 
 all: bin/gb_emu.out
 

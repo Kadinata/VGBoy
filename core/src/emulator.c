@@ -6,6 +6,7 @@
 #include "data_bus.h"
 #include "rom.h"
 #include "ram.h"
+#include "io.h"
 #include "status_code.h"
 
 status_code_t emulator_init(emulator_t *const emulator)
@@ -23,6 +24,12 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->ram.wram.offset = 0xC000;
   emulator->ram.vram.offset = 0x8000;
   emulator->ram.hram.offset = 0xFF80;
+  emulator->io.offset = 0xFF00;
+  emulator->tmr.addr_offset = 0xFF04;
+
+  emulator->tmr.int_handle = &emulator->cpu_state.int_handle;
+  emulator->io.int_handle = &emulator->cpu_state.int_handle;
+  emulator->io.timer_handle = &emulator->tmr;
 
   status = data_bus_init(&emulator->bus_handle);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -57,6 +64,17 @@ status_code_t emulator_init(emulator_t *const emulator)
       (data_bus_segment_read_fn)ram_read,
       (data_bus_segment_write_fn)ram_write,
       &emulator->ram);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = data_bus_add_segment(
+      &emulator->bus_handle,
+      SEGMENT_TYPE_IO_REG,
+      (data_bus_segment_read_fn)io_read,
+      (data_bus_segment_write_fn)io_write,
+      &emulator->io);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = timer_init(&emulator->tmr);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);

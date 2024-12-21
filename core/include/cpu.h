@@ -80,7 +80,7 @@ typedef struct cpu_state_s
   cpu_runmode_t run_mode;
   uint8_t ime_flag;
   uint8_t next_ime_flag;
-  interrupt_state_t int_state;
+  interrupt_handle_t int_handle; // TODO: convert to pointer
   bus_interface_t bus_interface;
 } cpu_state_t;
 
