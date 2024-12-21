@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "status_code.h"
+#include "interrupt.h"
 
 /* Address of entry point */
 #define ENTRY_PT_ADDR (0x100)
@@ -78,6 +79,8 @@ typedef struct cpu_state_s
   uint32_t m_cycles;
   cpu_runmode_t run_mode;
   uint8_t ime_flag;
+  uint8_t next_ime_flag;
+  interrupt_state_t int_state;
   bus_interface_t bus_interface;
 } cpu_state_t;
 

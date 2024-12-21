@@ -3,7 +3,6 @@ CFLAGS = -Icore/include -pedantic -Wall -Wextra -Wno-gnu-statement-expression -s
 LDFLAGS = -L/usr/local/lib
 
 SOURCES = core/src/cpu.c
-SOURCES += core/src/memory.c
 SOURCES += core/src/rom.c
 SOURCES += main.c
 SOURCES += core/src/data_bus.c
@@ -12,15 +11,14 @@ SOURCES += core/src/ram.c
 
 HEADERS += core/include/logging.h
 HEADERS = core/include/cpu.h
-HEADERS += core/include/memory.h
 HEADERS += core/include/rom.h
 HEADERS += core/include/status_code.h
 HEADERS += core/include/data_bus.h
 HEADERS += core/include/emulator.h
 HEADERS += core/include/ram.h
+HEADERS += core/include/interrupt.h
 
 OBJS = objects/core/cpu.o 
-OBJS += objects/core/memory.o
 OBJS += objects/core/rom.o
 OBJS += objects/main.o
 OBJS += objects/core/data_bus.o
