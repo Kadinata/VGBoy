@@ -554,6 +554,10 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(state);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(param);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_read_fn, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_write_fn, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_resource, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->int_handle, STATUS_ERR_INVALID_ARG);
 
   memset(state, 0, sizeof(cpu_state_t));
   state->registers.pc = ENTRY_PT_ADDR;
@@ -568,6 +572,7 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
   state->bus_interface.read = param->bus_read_fn;
   state->bus_interface.write = param->bus_write_fn;
   state->bus_interface.resource = param->bus_resource;
+  state->int_handle = param->int_handle;
 
   return STATUS_OK;
 }
@@ -587,7 +592,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
 
   if (state->run_mode == RUN_MODE_HALTED)
   {
-    if (state->int_handle.int_requested_flag)
+    if (state->int_handle->int_requested_flag)
     {
       state->run_mode = RUN_MODE_NORMAL;
     }
@@ -619,7 +624,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
 
 static uint8_t handle_single_interrupt(cpu_state_t *const state, interrupt_vector_t *const int_vector)
 {
-  interrupt_handle_t *const interrupt = &state->int_handle;
+  interrupt_handle_t *const interrupt = state->int_handle;
   if (interrupt->int_enable_mask & interrupt->int_requested_flag & int_vector->int_type)
   {
     /**

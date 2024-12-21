@@ -19,6 +19,7 @@ typedef struct
   ram_handle_t ram;
   io_handle_t io;
   timer_handle_t tmr;
+  interrupt_handle_t interrupt;
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);

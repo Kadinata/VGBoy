@@ -80,7 +80,7 @@ typedef struct cpu_state_s
   cpu_runmode_t run_mode;
   uint8_t ime_flag;
   uint8_t next_ime_flag;
-  interrupt_handle_t int_handle; // TODO: convert to pointer
+  interrupt_handle_t *int_handle;
   bus_interface_t bus_interface;
 } cpu_state_t;
 
@@ -88,7 +88,8 @@ typedef struct
 {
   cpu_bus_read_fn bus_read_fn;
   cpu_bus_write_fn bus_write_fn;
-  void* bus_resource;
+  void *bus_resource;
+  interrupt_handle_t *int_handle;
 } cpu_init_param_t;
 
 status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param);

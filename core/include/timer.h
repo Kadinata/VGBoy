@@ -12,10 +12,10 @@ typedef struct
   uint8_t tima;
   uint8_t tma;
   uint8_t tac;
-  interrupt_handle_t * int_handle;
+  interrupt_handle_t *int_handle;
 } timer_handle_t;
 
-status_code_t timer_init(timer_handle_t *const tmr_handle);
+status_code_t timer_init(timer_handle_t *const tmr_handle, interrupt_handle_t *const int_handle);
 status_code_t timer_tick(timer_handle_t *const tmr_handle);
 
 status_code_t timer_read(timer_handle_t *const tmr_handle, uint16_t const address, uint8_t *const data);

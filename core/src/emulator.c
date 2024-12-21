@@ -19,6 +19,12 @@ status_code_t emulator_init(emulator_t *const emulator)
       .bus_read_fn = (cpu_bus_read_fn)data_bus_read,
       .bus_write_fn = (cpu_bus_write_fn)data_bus_write,
       .bus_resource = &emulator->bus_handle,
+      .int_handle = &emulator->interrupt,
+  };
+
+  io_init_param_t io_init_params = {
+      .int_handle = &emulator->interrupt,
+      .timer_handle = &emulator->tmr,
   };
 
   emulator->ram.wram.offset = 0xC000;
@@ -26,10 +32,6 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->ram.hram.offset = 0xFF80;
   emulator->io.offset = 0xFF00;
   emulator->tmr.addr_offset = 0xFF04;
-
-  emulator->tmr.int_handle = &emulator->cpu_state.int_handle;
-  emulator->io.int_handle = &emulator->cpu_state.int_handle;
-  emulator->io.timer_handle = &emulator->tmr;
 
   status = data_bus_init(&emulator->bus_handle);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -74,7 +76,10 @@ status_code_t emulator_init(emulator_t *const emulator)
       &emulator->io);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = timer_init(&emulator->tmr);
+  status = io_init(&emulator->io, &io_init_params);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = timer_init(&emulator->tmr, &emulator->interrupt);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);

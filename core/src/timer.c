@@ -4,11 +4,13 @@
 #include "interrupt.h"
 #include "status_code.h"
 
-status_code_t timer_init(timer_handle_t *const tmr_handle)
+status_code_t timer_init(timer_handle_t *const tmr_handle, interrupt_handle_t *const int_handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(int_handle);
 
   tmr_handle->div = 0xABCC;
+  tmr_handle->int_handle = int_handle;
 
   return STATUS_OK;
 }

@@ -13,6 +13,13 @@ typedef struct
   interrupt_handle_t *int_handle;
 } io_handle_t;
 
+typedef struct
+{
+  timer_handle_t *timer_handle;
+  interrupt_handle_t *int_handle;
+} io_init_param_t;
+
+status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_param);
 status_code_t io_read(io_handle_t *const io_handle, uint16_t const address, uint8_t *const data);
 status_code_t io_write(io_handle_t *const io_handle, uint16_t const address, uint8_t const data);
 

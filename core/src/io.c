@@ -9,6 +9,19 @@
 
 static char serial_data[2];
 
+status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_param)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(io_handle)
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(init_param)
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->int_handle, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->timer_handle, STATUS_ERR_INVALID_ARG);
+
+  io_handle->int_handle = init_param->int_handle;
+  io_handle->timer_handle = init_param->timer_handle;
+
+  return STATUS_OK;
+}
+
 status_code_t io_read(io_handle_t *const io_handle, uint16_t const address, uint8_t *const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(io_handle);

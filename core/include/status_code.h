@@ -25,6 +25,12 @@ typedef enum
     return STATUS_ERR_NULL_PTR;            \
   }
 
+#define VERIFY_PTR_RETURN_STATUS_IF_NULL(p, status) \
+  if (p == NULL)                                    \
+  {                                                 \
+    return status;                                  \
+  }
+
 #define RETURN_STATUS_IF_NOT_OK(status) \
   if (status != STATUS_OK)              \
   {                                     \
