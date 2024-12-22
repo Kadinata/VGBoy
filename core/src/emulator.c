@@ -70,16 +70,32 @@ status_code_t emulator_init(emulator_t *const emulator)
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
+      SEGMENT_TYPE_HRAM,
+      (data_bus_segment_read_fn)ram_read,
+      (data_bus_segment_write_fn)ram_write,
+      &emulator->ram);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = data_bus_add_segment(
+      &emulator->bus_handle,
       SEGMENT_TYPE_IO_REG,
       (data_bus_segment_read_fn)io_read,
       (data_bus_segment_write_fn)io_write,
       &emulator->io);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = io_init(&emulator->io, &io_init_params);
+  status = data_bus_add_segment(
+      &emulator->bus_handle,
+      SEGMENT_TYPE_IE_REG,
+      (data_bus_segment_read_fn)int_read_enabled_mask,
+      (data_bus_segment_write_fn)int_write_enabled_mask,
+      &emulator->interrupt);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = timer_init(&emulator->tmr, &emulator->interrupt);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = io_init(&emulator->io, &io_init_params);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);

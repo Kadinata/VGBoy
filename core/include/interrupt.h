@@ -26,5 +26,7 @@ typedef struct
 } interrupt_handle_t;
 
 status_code_t request_interrupt(interrupt_handle_t *const int_handle, interrupt_type_t const int_type);
+status_code_t int_read_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const address, uint8_t *const data);
+status_code_t int_write_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const address, uint8_t const data);
 
 #endif /* __DMG_INTERRRUPT_H__ */
