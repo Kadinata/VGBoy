@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include "timing_sync.h"
 #include "cpu.h"
 
 #define TEST_PC_INIT_VALUE (0x100)

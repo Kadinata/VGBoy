@@ -33,17 +33,23 @@ void stub_test_LD_REG_d16(uint8_t opcode, cpu_state_t *state, uint16_t *reg)
 void stub_test_POP_REG(uint8_t opcode, cpu_state_t *state, uint16_t *reg)
 {
   uint16_t data = 0x1234;
+  uint16_t expected = 0x1234;
   uint16_t initial_sp = 0x200;
 
   stub_cpu_state_init(state);
   state->registers.sp = initial_sp;
   *reg = 0x0000;
 
+  if (reg == &state->registers.af)
+  {
+    expected &= 0xFFF0;
+  }
+
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
   stub_mem_read_16(initial_sp, &data);
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
-  TEST_ASSERT_EQUAL_HEX16(data, *reg);
+  TEST_ASSERT_EQUAL_HEX16(expected, *reg);
   TEST_ASSERT_EQUAL_HEX16(initial_sp + 2, state->registers.sp);
 
   TEST_ASSERT_EQUAL_HEX16(TEST_PC_INIT_VALUE + 1, state->registers.pc);
