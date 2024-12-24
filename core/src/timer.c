@@ -20,22 +20,27 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
 
   status_code_t status = STATUS_OK;
-  uint16_t prev_div = tmr_handle->div++;
   uint8_t timer_update = 0;
+
+  /**
+   * Always increment timer DIV at every T-cycle tick 
+   * and determine which bits flipped from 1 to 0.
+   */
+  uint16_t bit_changes = (tmr_handle->div++) & (~tmr_handle->div);
 
   switch ((tmr_handle->tac & 0x3)) // TODO: use constant
   {
   case 0: // TODO: use enum
-    timer_update = (prev_div & tmr_handle->div & (1 << 9)) ? 1 : 0;
+    timer_update = (bit_changes & (1 << 9)) ? 1 : 0;
     break;
   case 1:
-    timer_update = (prev_div & tmr_handle->div & (1 << 3)) ? 1 : 0;
+    timer_update = (bit_changes & (1 << 3)) ? 1 : 0;
     break;
   case 2:
-    timer_update = (prev_div & tmr_handle->div & (1 << 5)) ? 1 : 0;
+    timer_update = (bit_changes & (1 << 5)) ? 1 : 0;
     break;
   case 3:
-    timer_update = (prev_div & tmr_handle->div & (1 << 7)) ? 1 : 0;
+    timer_update = (bit_changes & (1 << 7)) ? 1 : 0;
     break;
   default:
     break;
@@ -60,7 +65,7 @@ status_code_t timer_read(timer_handle_t *const tmr_handle, uint16_t const addres
   VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
   switch (address - tmr_handle->addr_offset)
   {
-  case 0:
+  case 0: // TODO: use enum
     *data = (tmr_handle->div >> 8);
     break;
   case 1:
@@ -85,7 +90,7 @@ status_code_t timer_write(timer_handle_t *const tmr_handle, uint16_t const addre
 
   switch (address - tmr_handle->addr_offset)
   {
-  case 0:
+  case 0: // TODO: use enum
     tmr_handle->div = 0;
     break;
   case 1:
