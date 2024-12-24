@@ -18,11 +18,7 @@ status_code_t rom_load(rom_handle_t *const handle, const char *file)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(file);
-
-  if (handle->data != NULL)
-  {
-    return STATUS_ERR_ALREADY_INITIALIZED;
-  }
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(handle->data != NULL, STATUS_ERR_ALREADY_INITIALIZED);
 
   Log_I("Loading ROM file: %s", file);
 
@@ -70,11 +66,7 @@ status_code_t rom_load(rom_handle_t *const handle, const char *file)
 status_code_t rom_unload(rom_handle_t *const handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
-
-  if (handle->data == NULL)
-  {
-    return STATUS_ERR_ALREADY_FREED;
-  }
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_ALREADY_FREED);
 
   free(handle->data);
 
@@ -110,11 +102,8 @@ status_code_t rom_read(rom_handle_t *const handle, uint16_t const address, uint8
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
-
-  if (handle->header == NULL || handle->data == NULL)
-  {
-    return STATUS_ERR_NOT_INITIALIZED;
-  }
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_NOT_INITIALIZED);
 
   *data = handle->data[address]; // TODO: do address verification
   return STATUS_OK;
@@ -123,11 +112,8 @@ status_code_t rom_read(rom_handle_t *const handle, uint16_t const address, uint8
 status_code_t rom_write(rom_handle_t *const handle, uint16_t const address, uint8_t const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
-
-  if (handle->header == NULL || handle->data == NULL)
-  {
-    return STATUS_ERR_NOT_INITIALIZED;
-  }
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_NOT_INITIALIZED);
 
   handle->data[address] = data; // TODO: do address verification
   return STATUS_OK;

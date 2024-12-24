@@ -19,22 +19,14 @@ typedef enum
   STATUS_ERR_ADDRESS_OUT_OF_BOUND,
 } status_code_t;
 
-#define VERIFY_PTR_RETURN_ERROR_IF_NULL(p) \
-  if (p == NULL)                           \
-  {                                        \
-    return STATUS_ERR_NULL_PTR;            \
+#define VERIFY_COND_RETURN_STATUS_IF_TRUE(cond, status) \
+  if (cond)                                             \
+  {                                                     \
+    return status;                                      \
   }
 
-#define VERIFY_PTR_RETURN_STATUS_IF_NULL(p, status) \
-  if (p == NULL)                                    \
-  {                                                 \
-    return status;                                  \
-  }
-
-#define RETURN_STATUS_IF_NOT_OK(status) \
-  if (status != STATUS_OK)              \
-  {                                     \
-    return status;                      \
-  }
+#define VERIFY_PTR_RETURN_STATUS_IF_NULL(p, status) VERIFY_COND_RETURN_STATUS_IF_TRUE((p == NULL), status)
+#define VERIFY_PTR_RETURN_ERROR_IF_NULL(p) VERIFY_PTR_RETURN_STATUS_IF_NULL(p, STATUS_ERR_NULL_PTR)
+#define RETURN_STATUS_IF_NOT_OK(status) VERIFY_COND_RETURN_STATUS_IF_TRUE((status != STATUS_OK), status)
 
 #endif /* __STATUS_CODE_H__ */
