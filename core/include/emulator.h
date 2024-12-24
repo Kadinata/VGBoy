@@ -9,6 +9,7 @@
 #include "ram.h"
 #include "io.h"
 #include "timer.h"
+#include "timing_sync.h"
 #include "status_code.h"
 
 typedef struct
@@ -20,6 +21,7 @@ typedef struct
   io_handle_t io;
   timer_handle_t tmr;
   interrupt_handle_t interrupt;
+  timing_sync_handle_t sync_handle;
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);

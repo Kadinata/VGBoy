@@ -111,6 +111,7 @@ status_code_t data_bus_read(data_bus_handle_t *const bus_handle, uint16_t const 
 
   if (bus_segment == NULL || bus_segment->read_fn == NULL)
   {
+    Log_E("Bus segment not initialized for address: 0x%04X", address);
     return STATUS_ERR_NOT_INITIALIZED;
   }
 
@@ -126,6 +127,7 @@ status_code_t data_bus_write(data_bus_handle_t *const bus_handle, uint16_t const
 
   if (bus_segment == NULL || bus_segment->write_fn == NULL)
   {
+    Log_E("Bus segment not initialized for address: 0x%04X", address);
     return STATUS_ERR_NOT_INITIALIZED;
   }
 

@@ -7,7 +7,25 @@
 #include "rom.h"
 #include "ram.h"
 #include "io.h"
+#include "timer.h"
+#include "timing_sync.h"
+#include "logging.h"
 #include "status_code.h"
+
+static status_code_t sync_callback_handler(void *const ctx, uint8_t const m_cycle_count)
+{
+  emulator_t *const emulator = (emulator_t *)ctx;
+  uint16_t t_cycle_count = m_cycle_count * 4;
+  status_code_t status = STATUS_OK;
+
+  for (uint16_t i = 0; i < t_cycle_count; i++)
+  {
+    status = timer_tick(&emulator->tmr);
+    RETURN_STATUS_IF_NOT_OK(status);
+  }
+
+  return status;
+}
 
 status_code_t emulator_init(emulator_t *const emulator)
 {
@@ -20,6 +38,7 @@ status_code_t emulator_init(emulator_t *const emulator)
       .bus_write_fn = (cpu_bus_write_fn)data_bus_write,
       .bus_resource = &emulator->bus_handle,
       .int_handle = &emulator->interrupt,
+      .sync_handle = &emulator->sync_handle,
   };
 
   io_init_param_t io_init_params = {
@@ -99,6 +118,9 @@ status_code_t emulator_init(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = timing_sync_init(&emulator->sync_handle, sync_callback_handler, (void*)emulator);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;

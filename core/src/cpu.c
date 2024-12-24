@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "timing_sync.h"
 #include "status_code.h"
 #include "logging.h"
+#include "debug_serial.h"
 
 #define INST(handler_fn, dest_operand, src_operand, inst_length, cycle, alt_cycle) \
   ((instruction_t){                                                                \
@@ -136,6 +138,7 @@ uint8_t calc_cycle(uint8_t opcode, cpu_state_t *const state);
 void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode);
 uint8_t check_cond(cpu_state_t *const state, jump_mode_t mode);
 
+static status_code_t fetch(cpu_state_t *const state, uint8_t *const data);
 status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t *const data);
 status_code_t write_8(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const data);
 status_code_t read_16(cpu_state_t *const state, addressing_mode_t const addr_mode, uint16_t *const data);
@@ -151,6 +154,7 @@ static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t addr
 
 static status_code_t service_interrupts(cpu_state_t *const state);
 static uint8_t handle_single_interrupt(cpu_state_t *const state, interrupt_vector_t *const int_vector);
+static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle_count);
 
 status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
 status_code_t op_NOP(cpu_state_t *const state, inst_operands_t *const operands);
@@ -560,19 +564,26 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
   VERIFY_PTR_RETURN_STATUS_IF_NULL(param->int_handle, STATUS_ERR_INVALID_ARG);
 
   memset(state, 0, sizeof(cpu_state_t));
+
   state->registers.pc = ENTRY_PT_ADDR;
   state->registers.sp = 0xFFFE;
-  state->registers.af = 0xB001;
-  state->registers.bc = 0x1300;
-  state->registers.de = 0xD800;
-  state->registers.hl = 0x4D01;
+  state->registers.a = 0x01;
+  state->registers.f = 0xB0;
+  state->registers.b = 0x00;
+  state->registers.c = 0x13;
+  state->registers.d = 0x00;
+  state->registers.e = 0xD8;
+  state->registers.h = 0x01;
+  state->registers.l = 0x4D;
 
-  state->run_mode = RUN_MODE_NORMAL;
   state->ime_flag = 0;
+  state->run_mode = RUN_MODE_NORMAL;
+
   state->bus_interface.read = param->bus_read_fn;
   state->bus_interface.write = param->bus_write_fn;
   state->bus_interface.resource = param->bus_resource;
   state->int_handle = param->int_handle;
+  state->sync_handle = param->sync_handle;
 
   return STATUS_OK;
 }
@@ -582,41 +593,81 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(state);
 
   status_code_t status = STATUS_OK;
-  registers_t *const regs = &state->registers;
-  uint8_t service_interrupt = state->ime_flag;
+  // registers_t *const regs = &state->registers;
+
+  if (state->run_mode == RUN_MODE_NORMAL)
+  {
+    uint8_t opcode;
+    // uint16_t pc = regs->pc;
+    state->current_inst_m_cycle_count = 0;
+
+    status = fetch(state, &opcode);
+    RETURN_STATUS_IF_NOT_OK(status);
+
+    instruction_t *const inst = &inst_table[opcode];
+
+    // Log_D("Exec [%04X] -- %02X", pc, opcode);
+
+    status = inst->handler(state, &inst->operands);
+    RETURN_STATUS_IF_NOT_OK(status);
+
+    int8_t owed_cycles = calc_cycle(opcode, state) - state->current_inst_m_cycle_count;
+    if (owed_cycles > 0)
+    {
+      sync_cycles(state, owed_cycles);
+    }
+
+    /**
+     * Hacky way to ensure the lower bytes of the flag registers
+     * to remain 0. TODO
+     */
+    state->registers.f &= 0xF0;
+
+    serial_check();
+  }
+  else if (state->run_mode == RUN_MODE_HALTED)
+  {
+    sync_cycles(state, 1);
+    if (state->int_handle->int_requested_flag)
+    {
+      state->run_mode = RUN_MODE_NORMAL;
+    }
+  }
+  else
+  {
+    Log_D("Unknown run mode: %d", state->run_mode);
+    return STATUS_ERR_GENERIC;
+  }
+
+  // if (service_interrupt && state->int_handle->int_requested_flag)
+  if (state->ime_flag)
+  {
+    // Log_D("servicing interrupt: 0x%02X", state->int_handle->int_requested_flag);
+    status = service_interrupts(state);
+    state->next_ime_flag = 0;
+  }
 
   if (state->next_ime_flag)
   {
     state->ime_flag = 1;
   }
 
-  if (state->run_mode == RUN_MODE_HALTED)
+  return STATUS_OK;
+}
+
+static status_code_t fetch(cpu_state_t *const state, uint8_t *const data)
+{
+  return bus_read_8(state, state->registers.pc++, data);
+}
+
+static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle_count)
+{
+  state->m_cycles += m_cycle_count;
+  state->current_inst_m_cycle_count += m_cycle_count;
+
+  if (state->sync_handle)
   {
-    if (state->int_handle->int_requested_flag)
-    {
-      state->run_mode = RUN_MODE_NORMAL;
-    }
-  }
-  else if (service_interrupt)
-  {
-    status = service_interrupts(state);
-  }
-  else if (state->run_mode == RUN_MODE_NORMAL)
-  {
-    uint8_t opcode;
-    uint16_t pc = regs->pc;
-
-    status = bus_read_8(state, regs->pc++, &opcode);
-    RETURN_STATUS_IF_NOT_OK(status);
-
-    instruction_t *const inst = &inst_table[opcode];
-
-    Log_D("Exec [%04X] -- %02X", pc, opcode);
-
-    status = inst->handler(state, &inst->operands);
-    RETURN_STATUS_IF_NOT_OK(status);
-
-    state->m_cycles += calc_cycle(opcode, state);
+    return timing_m_cycle_sync(state->sync_handle, m_cycle_count);
   }
 
   return STATUS_OK;
@@ -645,6 +696,8 @@ static uint8_t handle_single_interrupt(cpu_state_t *const state, interrupt_vecto
 
     /* Disable interrupt master enable */
     state->ime_flag = 0;
+
+    // Log_D("Interrupt handled: 0x%02X, addr: 0x%04X; flag: 0x%02X", int_vector->int_type, int_vector->address, interrupt->int_requested_flag);
 
     return 1;
   }
@@ -717,11 +770,13 @@ reg_16_ptr_t reg_16_select(cpu_state_t *const state, addressing_mode_t const add
 
 static inline status_code_t bus_read_8(cpu_state_t *const state, uint16_t address, uint8_t *const data)
 {
+  sync_cycles(state, 1);
   return state->bus_interface.read(state->bus_interface.resource, address, data);
 }
 
 static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t address, uint8_t const data)
 {
+  sync_cycles(state, 1);
   return state->bus_interface.write(state->bus_interface.resource, address, data);
 }
 
@@ -729,8 +784,8 @@ static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t addre
 {
   uint8_t lsb, msb;
   status_code_t status;
-  status = state->bus_interface.read(state->bus_interface.resource, address, &lsb);
-  status = state->bus_interface.read(state->bus_interface.resource, address + 1, &msb);
+  status = bus_read_8(state, address, &lsb); // TODO: check status
+  status = bus_read_8(state, address + 1, &msb);
   *data = (msb << 8) | lsb;
   return status;
 }
@@ -738,8 +793,8 @@ static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t addre
 static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data)
 {
   status_code_t status;
-  status = state->bus_interface.write(state->bus_interface.resource, address, (data & 0xFF));
-  status = state->bus_interface.write(state->bus_interface.resource, address + 1, (data >> 8) & 0xFF);
+  status = bus_write_8(state, address, (data & 0xFF)); // TODO: check status
+  status = bus_write_8(state, address + 1, (data >> 8) & 0xFF);
   return status;
 }
 
@@ -754,7 +809,7 @@ status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode
   {
   case AM_IMM_D_8:
   case AM_IMM_S_8:
-    return bus_read_8(state, regs->pc++, data);
+    return fetch(state, data);
   case AM_MEM_HL:
   case AM_MEM_HL_INC:
   case AM_MEM_HL_DEC:
@@ -766,7 +821,7 @@ status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode
   case AM_MEM_FF_REG_C:
     return bus_read_8(state, (0xFF00 | regs->c), data);
   case AM_IMM_FF_A_8:
-    status = bus_read_8(state, regs->pc++, &address.lsb); /* TODO check status */
+    status = fetch(state, &address.lsb); /* TODO check status */
     status = bus_read_8(state, (0xFF00 | address.lsb), data);
     return status;
   case AM_IMM_A_16:
@@ -805,7 +860,7 @@ status_code_t write_8(cpu_state_t *const state, addressing_mode_t const addr_mod
   case AM_MEM_FF_REG_C:
     return bus_write_8(state, (0xFF00 | regs->c), data);
   case AM_IMM_FF_A_8:
-    status = bus_read_8(state, regs->pc++, &address.lsb); /* TODO check status */
+    status = fetch(state, &address.lsb); /* TODO check status */
     status = bus_write_8(state, (0xFF00 | address.lsb), data);
     return status;
   case AM_IMM_A_16:
@@ -982,6 +1037,7 @@ status_code_t read_reg_16_plus_offset(cpu_state_t *const state, addressing_mode_
   update_flags(state, FLAG_Z | FLAG_N, F_CLEAR);
   update_flags(state, FLAG_H, half_carry ? F_SET : F_CLEAR);
   update_flags(state, FLAG_C, full_carry ? F_SET : F_CLEAR);
+  sync_cycles(state, 1);
 
   return status;
 }
@@ -999,7 +1055,7 @@ status_code_t op_NOP(cpu_state_t *const __attribute__((unused)) state, inst_oper
 status_code_t op_STOP(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   state->registers.pc++;
-  state->run_mode = RUN_MODE_STOPPED;
+  // state->run_mode = RUN_MODE_STOPPED; // TODO: reenable
   return STATUS_OK;
 }
 
@@ -1020,6 +1076,7 @@ status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands)
   if (check_cond(state, operands->jump_mode))
   {
     state->registers.pc += offset;
+    sync_cycles(state, 1);
   }
   return status;
 }
@@ -1106,6 +1163,7 @@ status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operand
   {
     ++(*dest);
   }
+  sync_cycles(state, 1);
   return status;
 }
 
@@ -1134,6 +1192,7 @@ status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operand
   {
     --(*dest);
   }
+  sync_cycles(state, 1);
   return status;
 }
 
@@ -1324,6 +1383,7 @@ status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operand
   update_flags(state, FLAG_N, F_CLEAR);
   update_flags(state, FLAG_H, half_carry ? F_SET : F_CLEAR);
   update_flags(state, FLAG_C, full_carry ? F_SET : F_CLEAR);
+  sync_cycles(state, 1);
 
   return STATUS_OK;
 }
@@ -1406,6 +1466,7 @@ status_code_t op_CCF(cpu_state_t *const state, inst_operands_t *const __attribut
 
 status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands)
 {
+  sync_cycles(state, 1);
   if (check_cond(state, operands->jump_mode))
   {
     return pop_reg_16(state, &state->registers.pc);
@@ -1425,6 +1486,7 @@ status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands)
   {
     status = push_reg_16(state, &state->registers.pc);
     state->registers.pc = address;
+    sync_cycles(state, 1);
   }
 
   return status;
@@ -1437,7 +1499,10 @@ status_code_t op_POP(cpu_state_t *const state, inst_operands_t *const operands)
 
 status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands)
 {
-  return push_reg_16(state, reg_16_select(state, operands->dest));
+  status_code_t status = STATUS_OK;
+  status = push_reg_16(state, reg_16_select(state, operands->dest));
+  sync_cycles(state, 1);
+  return status;
 }
 
 status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1445,6 +1510,7 @@ status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands)
   status_code_t status = STATUS_OK;
   status = push_reg_16(state, &state->registers.pc);
   state->registers.pc = operands->reset_vector;
+  sync_cycles(state, 1);
   return status;
 }
 
@@ -1476,8 +1542,8 @@ status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribut
     }
   }
 
-  update_flags(state, FLAG_Z, (regs->a) ? F_SET : F_CLEAR);
-  update_flags(state, FLAG_H, F_SET);
+  update_flags(state, FLAG_Z, (regs->a == 0) ? F_SET : F_CLEAR);
+  update_flags(state, FLAG_H, F_CLEAR);
 
   return STATUS_OK;
 }
@@ -1527,9 +1593,8 @@ status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribu
 
   uint8_t cb_opcode;
   status_code_t status = STATUS_OK;
-  registers_t *const regs = &state->registers;
 
-  status = bus_read_8(state, regs->pc++, &cb_opcode);
+  status = fetch(state, &cb_opcode);
   RETURN_STATUS_IF_NOT_OK(status);
 
   uint8_t target_type = (cb_opcode & 0x7);
@@ -1556,7 +1621,7 @@ status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribu
     break;
   }
 
-  state->m_cycles += (target == AM_MEM_HL) ? ((handler_family == 1) ? 3 : 4) : 2;
+  // state->m_cycles += (target == AM_MEM_HL) ? ((handler_family == 1) ? 3 : 4) : 2;
 
   return status;
 }

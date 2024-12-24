@@ -5,6 +5,7 @@
 
 #include "status_code.h"
 #include "interrupt.h"
+#include "timing_sync.h"
 
 /* Address of entry point */
 #define ENTRY_PT_ADDR (0x100)
@@ -82,6 +83,8 @@ typedef struct cpu_state_s
   uint8_t next_ime_flag;
   interrupt_handle_t *int_handle;
   bus_interface_t bus_interface;
+  timing_sync_handle_t *sync_handle;
+  uint8_t current_inst_m_cycle_count; // TODO: find more elegant solution
 } cpu_state_t;
 
 typedef struct
@@ -90,6 +93,7 @@ typedef struct
   cpu_bus_write_fn bus_write_fn;
   void *bus_resource;
   interrupt_handle_t *int_handle;
+  timing_sync_handle_t *sync_handle;
 } cpu_init_param_t;
 
 status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param);
