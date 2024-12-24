@@ -152,8 +152,7 @@ static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t addre
 static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t address, uint16_t *const data);
 static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data);
 
-static status_code_t service_interrupts(cpu_state_t *const state);
-static uint8_t handle_single_interrupt(cpu_state_t *const state, interrupt_vector_t *const int_vector);
+static status_code_t handle_interrupt(void *const ctx, uint16_t const isr_address);
 static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle_count);
 
 status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
@@ -546,14 +545,6 @@ static instruction_t inst_table[] = {
     [0xFF] = INST(op_RST, RST_VEC_7, AM_NONE, 1, 4, 0),
 };
 
-static interrupt_vector_t interrupt_vector_table[] = {
-    {.address = 0x0040, .int_type = INT_VBLANK},
-    {.address = 0x0048, .int_type = INT_LCD},
-    {.address = 0x0050, .int_type = INT_TIMER},
-    {.address = 0x0058, .int_type = INT_SERIAL},
-    {.address = 0x0060, .int_type = INT_JOYPAD},
-};
-
 status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(state);
@@ -576,7 +567,6 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
   state->registers.h = 0x01;
   state->registers.l = 0x4D;
 
-  state->ime_flag = 0;
   state->run_mode = RUN_MODE_NORMAL;
 
   state->bus_interface.read = param->bus_read_fn;
@@ -585,7 +575,7 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
   state->int_handle = param->int_handle;
   state->sync_handle = param->sync_handle;
 
-  return STATUS_OK;
+  return interrupt_init(state->int_handle, handle_interrupt, state);
 }
 
 status_code_t cpu_emulation_cycle(cpu_state_t *const state)
@@ -628,7 +618,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
   else if (state->run_mode == RUN_MODE_HALTED)
   {
     sync_cycles(state, 1);
-    if (state->int_handle->int_requested_flag)
+    if (state->int_handle->regs.irf) // TODO: create interface (?)
     {
       state->run_mode = RUN_MODE_NORMAL;
     }
@@ -639,17 +629,16 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
     return STATUS_ERR_GENERIC;
   }
 
-  // if (service_interrupt && state->int_handle->int_requested_flag)
-  if (state->ime_flag)
+  if (state->int_handle->regs.ime) // TODO: create interface (?)
   {
     // Log_D("servicing interrupt: 0x%02X", state->int_handle->int_requested_flag);
-    status = service_interrupts(state);
+    status = service_interrupt(state->int_handle);
     state->next_ime_flag = 0;
   }
 
   if (state->next_ime_flag)
   {
-    state->ime_flag = 1;
+    state->int_handle->regs.ime = 1; // TODO: create interface (?)
   }
 
   return STATUS_OK;
@@ -673,47 +662,28 @@ static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle
   return STATUS_OK;
 }
 
-static uint8_t handle_single_interrupt(cpu_state_t *const state, interrupt_vector_t *const int_vector)
+static status_code_t handle_interrupt(void *const ctx, uint16_t const isr_address)
 {
-  interrupt_handle_t *const interrupt = state->int_handle;
-  if (interrupt->int_enable_mask & interrupt->int_requested_flag & int_vector->int_type)
+  status_code_t status = STATUS_OK;
+  cpu_state_t *const state = (cpu_state_t *)ctx;
+
+  /**
+   * Save current instruction to the stack and go to
+   * the address specified by the interrupt vector
+   */
+  status = push_reg_16(state, &state->registers.pc);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  state->registers.pc = isr_address;
+
+  /* Exit HALT mode if tthe CPU is currently halted */
+  if (state->run_mode == RUN_MODE_HALTED)
   {
-    /**
-     * Save current instruction to the stack and go to
-     * the address specified by the interrupt vector
-     */
-    push_reg_16(state, &state->registers.pc);
-    state->registers.pc = int_vector->address;
-
-    /* Clear the request flag for this inetrrupt */
-    interrupt->int_requested_flag &= ~int_vector->int_type;
-
-    /* Exit HALT mode if tthe CPU is currently halted */
-    if (state->run_mode == RUN_MODE_HALTED)
-    {
-      state->run_mode = RUN_MODE_NORMAL;
-    }
-
-    /* Disable interrupt master enable */
-    state->ime_flag = 0;
-
-    // Log_D("Interrupt handled: 0x%02X, addr: 0x%04X; flag: 0x%02X", int_vector->int_type, int_vector->address, interrupt->int_requested_flag);
-
-    return 1;
+    state->run_mode = RUN_MODE_NORMAL;
   }
 
-  return 0;
-}
+  // Log_D("Interrupt handled: 0x%02X, addr: 0x%04X; flag: 0x%02X", int_vector->int_type, int_vector->address, interrupt->int_requested_flag);
 
-static status_code_t service_interrupts(cpu_state_t *const state)
-{
-  for (int8_t i = 0; i < 5; i++)
-  {
-    if (handle_single_interrupt(state, &interrupt_vector_table[i]))
-    {
-      return STATUS_OK;
-    }
-  }
   return STATUS_OK;
 }
 
@@ -1550,13 +1520,13 @@ status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribut
 
 status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
-  state->ime_flag = 1;
+  state->int_handle->regs.ime = 1;
   return pop_reg_16(state, &state->registers.pc);
 }
 
 status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
-  state->ime_flag = 0;
+  state->int_handle->regs.ime = 0;
   state->next_ime_flag = 0;
   return STATUS_OK;
 }

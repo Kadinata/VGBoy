@@ -21,11 +21,31 @@ typedef struct
 
 typedef struct
 {
-  uint8_t int_requested_flag;
-  uint8_t int_enable_mask;
+  uint8_t ime;
+  uint8_t irf;
+  uint8_t ien;
+} interrupt_registers_t;
+
+typedef status_code_t (*interrupt_handler_cb_fn)(void *const ctx, uint16_t isr_address);
+
+typedef struct
+{
+  interrupt_handler_cb_fn callback_fn;
+  void *callback_ctx;
+} interrupt_callback_t;
+
+/* Struct containing all data necessary to manage interrupts */
+typedef struct
+{
+  interrupt_registers_t regs;
+  interrupt_callback_t callback;
 } interrupt_handle_t;
 
+status_code_t interrupt_init(interrupt_handle_t *const int_handle, interrupt_handler_cb_fn const callback_fn, void *callback_ctx);
+
 status_code_t request_interrupt(interrupt_handle_t *const int_handle, interrupt_type_t const int_type);
+status_code_t service_interrupt(interrupt_handle_t *const int_handle);
+
 status_code_t int_read_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const address, uint8_t *const data);
 status_code_t int_write_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const address, uint8_t const data);
 

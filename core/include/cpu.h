@@ -79,7 +79,6 @@ typedef struct cpu_state_s
   registers_t registers;
   uint32_t m_cycles;
   cpu_runmode_t run_mode;
-  uint8_t ime_flag;
   uint8_t next_ime_flag;
   interrupt_handle_t *int_handle;
   bus_interface_t bus_interface;

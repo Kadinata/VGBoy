@@ -43,7 +43,7 @@ status_code_t io_read(io_handle_t *const io_handle, uint16_t const address, uint
     status = timer_read(io_handle->timer_handle, address, data);
     break;
   case 0x000F:
-    *data = io_handle->int_handle->int_requested_flag; // TODO: create function
+    *data = io_handle->int_handle->regs.irf; // TODO: create function
     break;
   default:
     break;
@@ -73,7 +73,7 @@ status_code_t io_write(io_handle_t *const io_handle, uint16_t const address, uin
     status = timer_write(io_handle->timer_handle, address, data);
     break;
   case 0x000F:
-    io_handle->int_handle->int_requested_flag = data; // TODO: create function
+    io_handle->int_handle->regs.irf = data; // TODO: create function
     break;
   default:
     break;
