@@ -2,17 +2,9 @@
 #include "bus_interface.h"
 #include "status_code.h"
 
-TEST_FILE("bus_interface.c")
+#include "bus_interface_test_helper.h"
 
-typedef struct
-{
-  uint8_t read_data;
-  uint8_t write_data;
-  uint8_t read_count;
-  uint8_t write_count;
-  uint16_t address;
-  status_code_t return_status;
-} test_data_ctx_t;
+TEST_FILE("bus_interface.c")
 
 void setUp(void)
 {
@@ -20,38 +12,6 @@ void setUp(void)
 
 void tearDown(void)
 {
-}
-
-status_code_t stub_bus_read(void *const resource, uint16_t const address, uint8_t *const data)
-{
-  test_data_ctx_t *ctx = (test_data_ctx_t *)resource;
-  ctx->address = address;
-  *data = ctx->read_data;
-  ctx->read_count++;
-
-  return ctx->return_status;
-}
-
-status_code_t stub_bus_write(void *const resource, uint16_t const address, uint8_t const data)
-{
-  test_data_ctx_t *ctx = (test_data_ctx_t *)resource;
-  ctx->address = address;
-  ctx->write_data = data;
-  ctx->write_count++;
-
-  return ctx->return_status;
-}
-
-void stub_init_bus_interface(bus_interface_t *bus_interface, test_data_ctx_t *ctx)
-{
-  bus_interface->read = stub_bus_read;
-  bus_interface->write = stub_bus_write;
-  bus_interface->resource = ctx;
-
-  if (ctx)
-  {
-    ctx->return_status = STATUS_OK;
-  }
 }
 
 void test_bus_interface_read_null_ptr(void)
@@ -86,7 +46,7 @@ void test_bus_interface_write_not_initialized(void)
 void test_bus_interface_read(void)
 {
   uint8_t data;
-  test_data_ctx_t ctx = {0};
+  test_bus_data_ctx_t ctx = {0};
   bus_interface_t bus_interface = {0};
   stub_init_bus_interface(&bus_interface, &ctx);
 
@@ -109,7 +69,7 @@ void test_bus_interface_read(void)
 
 void test_bus_interface_write(void)
 {
-  test_data_ctx_t ctx = {0};
+  test_bus_data_ctx_t ctx = {0};
   bus_interface_t bus_interface = {0};
   stub_init_bus_interface(&bus_interface, &ctx);
 
@@ -131,7 +91,7 @@ void test_bus_interface_write(void)
 void test_bus_interface_forwards_return_status(void)
 {
   uint8_t data;
-  test_data_ctx_t ctx = {0};
+  test_bus_data_ctx_t ctx = {0};
   bus_interface_t bus_interface = {0};
   stub_init_bus_interface(&bus_interface, &ctx);
 
