@@ -9,6 +9,7 @@
 #include "ram.h"
 #include "oam.h"
 #include "io.h"
+#include "dma.h"
 #include "timer.h"
 #include "timing_sync.h"
 #include "status_code.h"
@@ -22,6 +23,7 @@ typedef struct
   oam_handle_t oam;
   io_handle_t io;
   timer_handle_t tmr;
+  dma_handle_t dma;
   interrupt_handle_t interrupt;
   timing_sync_handle_t sync_handle;
 } emulator_t;
