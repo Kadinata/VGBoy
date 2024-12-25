@@ -10,6 +10,7 @@
 #include "timer.h"
 #include "timing_sync.h"
 #include "logging.h"
+#include "bus_interface.h"
 #include "status_code.h"
 
 static status_code_t sync_callback_handler(void *const ctx, uint8_t const m_cycle_count)
@@ -34,9 +35,11 @@ status_code_t emulator_init(emulator_t *const emulator)
   status_code_t status = STATUS_OK;
 
   cpu_init_param_t cpu_init_params = {
-      .bus_read_fn = (cpu_bus_read_fn)data_bus_read,
-      .bus_write_fn = (cpu_bus_write_fn)data_bus_write,
-      .bus_resource = &emulator->bus_handle,
+      .bus_interface = {
+          .read = (bus_read_fn)data_bus_read,
+          .write = (bus_write_fn)data_bus_write,
+          .resource = &emulator->bus_handle,
+      },
       .int_handle = &emulator->interrupt,
       .sync_handle = &emulator->sync_handle,
   };
@@ -58,57 +61,71 @@ status_code_t emulator_init(emulator_t *const emulator)
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_ROM_BANK_0,
-      (data_bus_segment_read_fn)rom_read,
-      (data_bus_segment_write_fn)rom_write,
-      &emulator->rom);
+      (bus_interface_t){
+          .read = (bus_read_fn)rom_read,
+          .write = (bus_write_fn)rom_write,
+          .resource = &emulator->rom,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_ROM_SWITCHABLE_BANK,
-      (data_bus_segment_read_fn)rom_read,
-      (data_bus_segment_write_fn)rom_write,
-      &emulator->rom);
+      (bus_interface_t){
+          .read = (bus_read_fn)rom_read,
+          .write = (bus_write_fn)rom_write,
+          .resource = &emulator->rom,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_WRAM,
-      (data_bus_segment_read_fn)ram_read,
-      (data_bus_segment_write_fn)ram_write,
-      &emulator->ram);
+      (bus_interface_t){
+          .read = (bus_read_fn)ram_read,
+          .write = (bus_write_fn)ram_write,
+          .resource = &emulator->ram,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_VRAM,
-      (data_bus_segment_read_fn)ram_read,
-      (data_bus_segment_write_fn)ram_write,
-      &emulator->ram);
+      (bus_interface_t){
+          .read = (bus_read_fn)ram_read,
+          .write = (bus_write_fn)ram_write,
+          .resource = &emulator->ram,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_HRAM,
-      (data_bus_segment_read_fn)ram_read,
-      (data_bus_segment_write_fn)ram_write,
-      &emulator->ram);
+      (bus_interface_t){
+          .read = (bus_read_fn)ram_read,
+          .write = (bus_write_fn)ram_write,
+          .resource = &emulator->ram,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_IO_REG,
-      (data_bus_segment_read_fn)io_read,
-      (data_bus_segment_write_fn)io_write,
-      &emulator->io);
+      (bus_interface_t){
+          .read = (bus_read_fn)io_read,
+          .write = (bus_write_fn)io_write,
+          .resource = &emulator->io,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(
       &emulator->bus_handle,
       SEGMENT_TYPE_IE_REG,
-      (data_bus_segment_read_fn)int_read_enabled_mask,
-      (data_bus_segment_write_fn)int_write_enabled_mask,
-      &emulator->interrupt);
+      (bus_interface_t){
+          .read = (bus_read_fn)int_read_enabled_mask,
+          .write = (bus_write_fn)int_write_enabled_mask,
+          .resource = &emulator->interrupt,
+      });
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = timer_init(&emulator->tmr, &emulator->interrupt);
@@ -120,7 +137,7 @@ status_code_t emulator_init(emulator_t *const emulator)
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = timing_sync_init(&emulator->sync_handle, sync_callback_handler, (void*)emulator);
+  status = timing_sync_init(&emulator->sync_handle, sync_callback_handler, (void *)emulator);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;

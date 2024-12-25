@@ -6,6 +6,7 @@
 #include "status_code.h"
 #include "interrupt.h"
 #include "timing_sync.h"
+#include "bus_interface.h"
 
 /* Address of entry point */
 #define ENTRY_PT_ADDR (0x100)
@@ -63,16 +64,6 @@ typedef struct registers_s
   uint16_t sp;
 } registers_t;
 
-typedef status_code_t (*cpu_bus_read_fn)(void *const resource, uint16_t const address, uint8_t *const data);
-typedef status_code_t (*cpu_bus_write_fn)(void *const resource, uint16_t const address, uint8_t const data);
-
-typedef struct
-{
-  cpu_bus_read_fn read;
-  cpu_bus_write_fn write;
-  void *resource;
-} bus_interface_t;
-
 /* CPU state definition */
 typedef struct cpu_state_s
 {
@@ -88,9 +79,7 @@ typedef struct cpu_state_s
 
 typedef struct
 {
-  cpu_bus_read_fn bus_read_fn;
-  cpu_bus_write_fn bus_write_fn;
-  void *bus_resource;
+  bus_interface_t bus_interface;
   interrupt_handle_t *int_handle;
   timing_sync_handle_t *sync_handle;
 } cpu_init_param_t;

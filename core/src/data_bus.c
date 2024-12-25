@@ -1,6 +1,8 @@
 #include "data_bus.h"
 
 #include <stdint.h>
+#include <string.h>
+
 #include "logging.h"
 #include "status_code.h"
 
@@ -9,9 +11,11 @@ static status_code_t unsupported_region_write(void *const resource, uint16_t con
 
 static data_bus_segment_t unsupported_region = (data_bus_segment_t){
     .segment_type = -1,
-    .read_fn = unsupported_region_read,
-    .write_fn = unsupported_region_write,
-    .resource = NULL,
+    .interface = (bus_interface_t){
+        .read = unsupported_region_read,
+        .write = unsupported_region_write,
+        .resource = NULL,
+    },
 };
 
 static data_bus_segment_t *get_bus_segment(data_bus_handle_t *const handle, uint16_t const address)
@@ -75,6 +79,8 @@ static data_bus_segment_t *get_bus_segment(data_bus_handle_t *const handle, uint
   return NULL;
 }
 
+
+// TODO: may remove
 status_code_t data_bus_init(data_bus_handle_t *const bus_handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_handle);
@@ -85,19 +91,14 @@ status_code_t data_bus_init(data_bus_handle_t *const bus_handle)
 status_code_t data_bus_add_segment(
     data_bus_handle_t *const bus_handle,
     data_bus_segment_type_t const segment_type,
-    data_bus_segment_read_fn const read_fn,
-    data_bus_segment_write_fn const write_fn,
-    void *const bus_resource)
+    bus_interface_t const bus_interface)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_handle);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(read_fn);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(read_fn);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_resource);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_interface.read);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_interface.write);
 
   bus_handle->segments[segment_type].segment_type = segment_type;
-  bus_handle->segments[segment_type].write_fn = write_fn;
-  bus_handle->segments[segment_type].read_fn = read_fn;
-  bus_handle->segments[segment_type].resource = bus_resource;
+  memcpy(&bus_handle->segments[segment_type].interface, &bus_interface, sizeof(bus_interface_t));
 
   return STATUS_OK;
 }
@@ -109,14 +110,13 @@ status_code_t data_bus_read(data_bus_handle_t *const bus_handle, uint16_t const 
 
   data_bus_segment_t *bus_segment = get_bus_segment(bus_handle, address);
 
-  if (bus_segment == NULL || bus_segment->read_fn == NULL)
+  if (bus_segment == NULL || bus_segment->interface.read == NULL)
   {
     Log_E("Bus segment not initialized for address: 0x%04X", address);
     return STATUS_ERR_NOT_INITIALIZED;
   }
 
-  bus_segment->read_fn(bus_segment->resource, address, data);
-  return STATUS_OK;
+  return bus_interface_read(&bus_segment->interface, address, data);
 }
 
 status_code_t data_bus_write(data_bus_handle_t *const bus_handle, uint16_t const address, uint8_t const data)
@@ -125,14 +125,13 @@ status_code_t data_bus_write(data_bus_handle_t *const bus_handle, uint16_t const
 
   data_bus_segment_t *bus_segment = get_bus_segment(bus_handle, address);
 
-  if (bus_segment == NULL || bus_segment->write_fn == NULL)
+  if (bus_segment == NULL || bus_segment->interface.write == NULL)
   {
     Log_E("Bus segment not initialized for address: 0x%04X", address);
     return STATUS_ERR_NOT_INITIALIZED;
   }
 
-  bus_segment->write_fn(bus_segment->resource, address, data);
-  return STATUS_OK;
+  return bus_interface_write(&bus_segment->interface, address, data);
 }
 
 static status_code_t unsupported_region_read(void *const __attribute__((unused)) resource, uint16_t const address, uint8_t *const data)

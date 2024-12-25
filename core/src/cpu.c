@@ -549,9 +549,9 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(state);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(param);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_read_fn, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_write_fn, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_resource, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface.read, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface.write, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface.resource, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(param->int_handle, STATUS_ERR_INVALID_ARG);
 
   memset(state, 0, sizeof(cpu_state_t));
@@ -569,9 +569,7 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 
   state->run_mode = RUN_MODE_NORMAL;
 
-  state->bus_interface.read = param->bus_read_fn;
-  state->bus_interface.write = param->bus_write_fn;
-  state->bus_interface.resource = param->bus_resource;
+  memcpy(&state->bus_interface, &param->bus_interface, sizeof(bus_interface_t));
   state->int_handle = param->int_handle;
   state->sync_handle = param->sync_handle;
 
@@ -741,13 +739,13 @@ reg_16_ptr_t reg_16_select(cpu_state_t *const state, addressing_mode_t const add
 static inline status_code_t bus_read_8(cpu_state_t *const state, uint16_t address, uint8_t *const data)
 {
   sync_cycles(state, 1);
-  return state->bus_interface.read(state->bus_interface.resource, address, data);
+  return bus_interface_read(&state->bus_interface, address, data);
 }
 
 static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t address, uint8_t const data)
 {
   sync_cycles(state, 1);
-  return state->bus_interface.write(state->bus_interface.resource, address, data);
+  return bus_interface_write(&state->bus_interface, address, data);
 }
 
 static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t address, uint16_t *const data)

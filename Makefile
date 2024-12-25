@@ -13,6 +13,7 @@ SOURCES += core/src/interrupt.c
 SOURCES += core/src/timer.c
 SOURCES += core/src/timing_sync.c
 SOURCES += core/src/debug_serial.c
+SOURCES += core/src/bus_interface.c
 
 HEADERS += core/include/logging.h
 HEADERS = core/include/cpu.h
@@ -26,6 +27,7 @@ HEADERS += core/include/io.h
 HEADERS += core/include/timer.h
 HEADERS += core/include/timing_sync.h
 HEADERS += core/include/debug_serial.h
+HEADERS += core/include/bus_interface.h
 
 OBJS = objects/core/cpu.o 
 OBJS += objects/core/rom.o
@@ -38,6 +40,7 @@ OBJS += objects/core/interrupt.o
 OBJS += objects/core/timer.o
 OBJS += objects/core/timing_sync.o
 OBJS += objects/core/debug_serial.o
+OBJS += objects/core/bus_interface.o
 
 all: bin/gb_emu.out
 
