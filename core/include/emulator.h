@@ -7,6 +7,7 @@
 #include "data_bus.h"
 #include "rom.h"
 #include "ram.h"
+#include "oam.h"
 #include "io.h"
 #include "timer.h"
 #include "timing_sync.h"
@@ -18,6 +19,7 @@ typedef struct
   data_bus_handle_t bus_handle;
   rom_handle_t rom;
   ram_handle_t ram;
+  oam_handle_t oam;
   io_handle_t io;
   timer_handle_t tmr;
   interrupt_handle_t interrupt;

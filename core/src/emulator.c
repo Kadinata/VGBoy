@@ -6,6 +6,7 @@
 #include "data_bus.h"
 #include "rom.h"
 #include "ram.h"
+#include "oam.h"
 #include "io.h"
 #include "timer.h"
 #include "timing_sync.h"
@@ -52,6 +53,7 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->ram.wram.offset = 0xC000;
   emulator->ram.vram.offset = 0x8000;
   emulator->ram.hram.offset = 0xFF80;
+  emulator->oam.offset = 0xFE00;
   emulator->io.offset = 0xFF00;
   emulator->tmr.addr_offset = 0xFF04;
 
@@ -95,6 +97,16 @@ status_code_t emulator_init(emulator_t *const emulator)
           .read = (bus_read_fn)ram_read,
           .write = (bus_write_fn)ram_write,
           .resource = &emulator->ram,
+      });
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = data_bus_add_segment(
+      &emulator->bus_handle,
+      SEGMENT_TYPE_OAM,
+      (bus_interface_t){
+          .read = (bus_read_fn)oam_read,
+          .write = (bus_write_fn)oam_write,
+          .resource = &emulator->oam,
       });
   RETURN_STATUS_IF_NOT_OK(status);
 
