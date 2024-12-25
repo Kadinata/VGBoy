@@ -2,9 +2,11 @@
 #include "cpu.h"
 #include "status_code.h"
 
+#include "mock_bus_interface.h"
+#include "mock_interrupt.h"
+#include "mock_timing_sync.h"
+#include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
-
-#include "mock_memory.h"
 
 #define TEST_INC_REG(REG_NAME, REG, OPCODE)                  \
   void test_INC_##REG_NAME(void)                             \
@@ -24,6 +26,7 @@ TEST_FILE("cpu.c")
 
 void setUp(void)
 {
+  serial_check_Ignore();
 }
 
 void tearDown(void)
@@ -124,7 +127,8 @@ void stub_test_INC_MEM__core(uint8_t opcode, cpu_state_t *state, uint16_t addres
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
   stub_mem_read_8(address, &data);
-  mem_write_8_ExpectAndReturn(address, data + 1, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, address, data + 1, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
 
@@ -138,7 +142,8 @@ void stub_test_DEC_MEM__core(uint8_t opcode, cpu_state_t *state, uint16_t addres
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
   stub_mem_read_8(address, &data);
-  mem_write_8_ExpectAndReturn(address, data - 1, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, address, data - 1, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
 

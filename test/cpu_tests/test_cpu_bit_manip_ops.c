@@ -2,8 +2,11 @@
 #include "cpu.h"
 #include "status_code.h"
 
+#include "mock_bus_interface.h"
+#include "mock_interrupt.h"
+#include "mock_timing_sync.h"
+#include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
-#include "mock_memory.h"
 
 #define TEST_RLC_REG(REG_NAME, REG, OPCODE)                              \
   void test_RLC_##REG_NAME(void)                                         \
@@ -574,6 +577,7 @@ TEST_FILE("cpu.c")
 
 void setUp(void)
 {
+  serial_check_Ignore();
 }
 
 void tearDown(void)
@@ -644,7 +648,8 @@ void stub_test_CB_opcode_MEM_HL(uint8_t opcode, cpu_state_t *state, uint8_t data
   stub_mem_read_8(address, &data);
 
   /* Expect to write the result back to memory location pointed by register HL */
-  mem_write_8_ExpectAndReturn(address, expected_result, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, address, expected_result, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   /* Execute the instruction */
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));

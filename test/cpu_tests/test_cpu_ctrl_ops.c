@@ -2,8 +2,11 @@
 #include "cpu.h"
 #include "status_code.h"
 
+#include "mock_bus_interface.h"
+#include "mock_interrupt.h"
+#include "mock_timing_sync.h"
+#include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
-#include "mock_memory.h"
 
 #define TEST_PC_INIT_VALUE (0x100)
 
@@ -11,6 +14,7 @@ TEST_FILE("cpu.c")
 
 void setUp(void)
 {
+  serial_check_Ignore();
 }
 
 void tearDown(void)

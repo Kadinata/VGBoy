@@ -2,7 +2,10 @@
 #include "cpu.h"
 #include "status_code.h"
 
-#include "mock_memory.h"
+#include "mock_bus_interface.h"
+#include "mock_interrupt.h"
+#include "mock_timing_sync.h"
+#include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
 
 #define TEST_RST(RST_NUM, RST_VECTOR, OPCODE)  \
@@ -16,6 +19,7 @@ TEST_FILE("cpu.c")
 
 void setUp(void)
 {
+  serial_check_Ignore();
 }
 
 void tearDown(void)

@@ -2,7 +2,10 @@
 #include "cpu.h"
 #include "status_code.h"
 
-#include "mock_memory.h"
+#include "mock_bus_interface.h"
+#include "mock_interrupt.h"
+#include "mock_timing_sync.h"
+#include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
 
 #define TEST_LD_REG_REG(DEST_NAME, DEST_REG, SRC_NAME, SRC_REG, OPCODE)                          \
@@ -30,6 +33,7 @@ TEST_FILE("cpu.c")
 
 void setUp(void)
 {
+  serial_check_Ignore();
 }
 
 void tearDown(void)
@@ -77,7 +81,8 @@ void stub_test_LD_REG_2_MEM(uint8_t opcode, cpu_state_t *state, uint16_t *dest, 
   *dest = addr;
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
-  mem_write_8_ExpectAndReturn(addr, data, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, addr, data, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(state));
 
@@ -189,7 +194,8 @@ void test_LD_HL_INC_A(void)
   state.registers.hl = 0x1234;
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
-  mem_write_8_ExpectAndReturn(0x1234, 0xAA, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0x1234, 0xAA, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
   TEST_ASSERT_EQUAL_HEX16(0x1235, state.registers.hl);
@@ -252,7 +258,8 @@ void test_LD_HL_DEC_A(void)
   state.registers.hl = 0x1234;
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
-  mem_write_8_ExpectAndReturn(0x1234, 0xAA, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0x1234, 0xAA, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
   TEST_ASSERT_EQUAL_HEX16(0x1233, state.registers.hl);
@@ -275,7 +282,8 @@ void test_LD_HL_d8(void)
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
   stub_mem_read_8(TEST_PC_INIT_VALUE + 1, &data);
-  mem_write_8_ExpectAndReturn(0x1234, data, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0x1234, data, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
   TEST_ASSERT_EQUAL_HEX16(0x1234, state.registers.hl);
@@ -393,7 +401,8 @@ void test_LD_MEM_HL_H(void)
   state.registers.hl = 0x1234;
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
-  mem_write_8_ExpectAndReturn(0x1234, 0x12, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0x1234, 0x12, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
 
@@ -412,7 +421,8 @@ void test_LD_MEM_HL_L(void)
   state.registers.hl = 0x1234;
 
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
-  mem_write_8_ExpectAndReturn(0x1234, 0x34, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0x1234, 0x34, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
 
@@ -451,7 +461,8 @@ void test_LD_IMM_A8_A(void)
   stub_mem_read_8(TEST_PC_INIT_VALUE + 1, &offset);
 
   /* Should write the content of register A to 0xFF00 + offset */
-  mem_write_8_ExpectAndReturn(0xFF00 | offset, 0xAA, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0xFF00 | offset, 0xAA, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
 
@@ -476,7 +487,8 @@ void test_LD_MEM_C_A(void)
   stub_mem_read_8(TEST_PC_INIT_VALUE, &opcode);
 
   /* Should write the content of register A to 0xFF00 + register C value */
-  mem_write_8_ExpectAndReturn(0xFF00 | offset, 0xAA, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, 0xFF00 | offset, 0xAA, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
 
@@ -503,7 +515,8 @@ void test_LD_IMM_a16_A(void)
   stub_mem_read_16(TEST_PC_INIT_VALUE + 1, &address);
 
   /* Store the value of Register A in the memory location specified by the address */
-  mem_write_8_ExpectAndReturn(address, 0xAA, STATUS_OK);
+  bus_interface_write_ExpectAndReturn(NULL, address, 0xAA, STATUS_OK);
+  bus_interface_write_IgnoreArg_bus_interface();
 
   TEST_ASSERT_EQUAL_INT(STATUS_OK, cpu_emulation_cycle(&state));
 

@@ -1,6 +1,10 @@
 #include "unity.h"
 #include "cpu.h"
-#include "mock_memory.h"
+
+#include "mock_bus_interface.h"
+#include "mock_interrupt.h"
+#include "mock_timing_sync.h"
+#include "mock_debug_serial.h"
 
 void setUp(void)
 {
