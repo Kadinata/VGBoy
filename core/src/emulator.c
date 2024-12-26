@@ -48,6 +48,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
   io_init_param_t io_init_params = {
       .dma_handle = &emulator->dma,
       .int_bus_interface = &emulator->interrupt.bus_interface,
+      .lcd_bus_interface = &emulator->lcd.bus_interface,
       .timer_bus_interface = &emulator->tmr.bus_interface,
   };
 
@@ -61,6 +62,9 @@ static inline status_code_t module_init(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = oam_init(&emulator->oam);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = lcd_init(&emulator->lcd);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = timer_init(&emulator->tmr, &emulator->interrupt);
@@ -95,6 +99,9 @@ static inline status_code_t configure_data_bus(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_VRAM, emulator->ram.bus_interface);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_EXT_RAM, emulator->rom.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_OAM, emulator->oam.bus_interface);

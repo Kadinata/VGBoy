@@ -16,11 +16,13 @@ status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_
   VERIFY_PTR_RETURN_ERROR_IF_NULL(io_handle)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(init_param)
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->dma_handle, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->lcd_bus_interface, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->int_bus_interface, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->timer_bus_interface, STATUS_ERR_INVALID_ARG);
 
   io_handle->dma_handle = init_param->dma_handle;
   io_handle->int_bus_interface = init_param->int_bus_interface;
+  io_handle->lcd_bus_interface = init_param->lcd_bus_interface;
   io_handle->timer_bus_interface = init_param->timer_bus_interface;
 
   io_handle->bus_interface.read = io_read;
@@ -28,6 +30,7 @@ status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_
   io_handle->bus_interface.resource = io_handle;
 
   io_handle->timer_bus_interface->offset = 0x0004;
+  io_handle->lcd_bus_interface->offset = 0x0040;
 
   return STATUS_OK;
 }
@@ -39,8 +42,6 @@ static status_code_t io_read(void *const resource, uint16_t const address, uint8
 
   status_code_t status = STATUS_OK;
   io_handle_t *io_handle = (io_handle_t *)resource;
-
-  static uint8_t ly = 0;
 
   switch (address)
   {
@@ -59,9 +60,19 @@ static status_code_t io_read(void *const resource, uint16_t const address, uint8
   case 0x000F:
     status = bus_interface_read(io_handle->int_bus_interface, address + io_handle->bus_interface.offset, data);
     break;
+  case 0x0040:
+  case 0x0041:
+  case 0x0042:
+  case 0x0043:
   case 0x0044:
-    *data = ly++;
-    return status;
+  case 0x0045:
+  case 0x0047:
+  case 0x0048:
+  case 0x0049:
+  case 0x004A:
+  case 0x004B:
+    status = bus_interface_read(io_handle->lcd_bus_interface, address, data);
+    break;
   default:
     break;
   }
@@ -92,6 +103,19 @@ static status_code_t io_write(void *const resource, uint16_t const address, uint
     break;
   case 0x000F:
     status = bus_interface_write(io_handle->int_bus_interface, address + io_handle->bus_interface.offset, data);
+    break;
+  case 0x0040:
+  case 0x0041:
+  case 0x0042:
+  case 0x0043:
+  case 0x0044:
+  case 0x0045:
+  case 0x0047:
+  case 0x0048:
+  case 0x0049:
+  case 0x004A:
+  case 0x004B:
+    status = bus_interface_write(io_handle->lcd_bus_interface, address, data);
     break;
   case 0x0046:
     status = dma_start(io_handle->dma_handle, data);

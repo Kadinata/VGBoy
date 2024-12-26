@@ -10,6 +10,7 @@ typedef struct
 {
   dma_handle_t *dma_handle;
   bus_interface_t *int_bus_interface;
+  bus_interface_t *lcd_bus_interface;
   bus_interface_t *timer_bus_interface;
   bus_interface_t bus_interface;
 } io_handle_t;
@@ -18,6 +19,7 @@ typedef struct
 {
   dma_handle_t *dma_handle;
   bus_interface_t *int_bus_interface;
+  bus_interface_t *lcd_bus_interface;
   bus_interface_t *timer_bus_interface;
 } io_init_param_t;
 
