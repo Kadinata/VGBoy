@@ -46,9 +46,9 @@ static inline status_code_t module_init(emulator_t *const emulator)
   };
 
   io_init_param_t io_init_params = {
-      .int_handle = &emulator->interrupt,
       .dma_handle = &emulator->dma,
-      .timer_handle = &emulator->tmr,
+      .int_bus_interface = &emulator->interrupt.bus_interface,
+      .timer_bus_interface = &emulator->tmr.bus_interface,
   };
 
   status = data_bus_init(&emulator->bus_handle);

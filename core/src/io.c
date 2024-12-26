@@ -4,8 +4,6 @@
 
 #include "bus_interface.h"
 #include "logging.h"
-#include "timer.h"
-#include "interrupt.h"
 #include "dma.h"
 #include "status_code.h"
 #include "debug_serial.h"
@@ -18,18 +16,18 @@ status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_
   VERIFY_PTR_RETURN_ERROR_IF_NULL(io_handle)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(init_param)
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->dma_handle, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->int_handle, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->timer_handle, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->int_bus_interface, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->timer_bus_interface, STATUS_ERR_INVALID_ARG);
 
   io_handle->dma_handle = init_param->dma_handle;
-  io_handle->int_handle = init_param->int_handle;
-  io_handle->timer_handle = init_param->timer_handle;
+  io_handle->int_bus_interface = init_param->int_bus_interface;
+  io_handle->timer_bus_interface = init_param->timer_bus_interface;
 
   io_handle->bus_interface.read = io_read;
   io_handle->bus_interface.write = io_write;
   io_handle->bus_interface.resource = io_handle;
 
-  io_handle->timer_handle->bus_interface.offset = 0x0004;
+  io_handle->timer_bus_interface->offset = 0x0004;
 
   return STATUS_OK;
 }
@@ -41,7 +39,6 @@ static status_code_t io_read(void *const resource, uint16_t const address, uint8
 
   status_code_t status = STATUS_OK;
   io_handle_t *io_handle = (io_handle_t *)resource;
-  bus_interface_t *bus_interface;
 
   static uint8_t ly = 0;
 
@@ -57,12 +54,10 @@ static status_code_t io_read(void *const resource, uint16_t const address, uint8
   case 0x0005:
   case 0x0006:
   case 0x0007:
-    bus_interface = &io_handle->timer_handle->bus_interface;
-    status = bus_interface_read(bus_interface, address, data);
+    status = bus_interface_read(io_handle->timer_bus_interface, address, data);
     break;
   case 0x000F:
-    bus_interface = &io_handle->int_handle->bus_interface;
-    status = bus_interface_read(bus_interface, address + io_handle->bus_interface.offset, data);
+    status = bus_interface_read(io_handle->int_bus_interface, address + io_handle->bus_interface.offset, data);
     break;
   case 0x0044:
     *data = ly++;
@@ -80,7 +75,6 @@ static status_code_t io_write(void *const resource, uint16_t const address, uint
 
   status_code_t status = STATUS_OK;
   io_handle_t *io_handle = (io_handle_t *)resource;
-  bus_interface_t *bus_interface;
 
   switch (address)
   {
@@ -94,12 +88,10 @@ static status_code_t io_write(void *const resource, uint16_t const address, uint
   case 0x0005:
   case 0x0006:
   case 0x0007:
-    bus_interface = &io_handle->timer_handle->bus_interface;
-    status = bus_interface_write(bus_interface, address, data);
+    status = bus_interface_write(io_handle->timer_bus_interface, address, data);
     break;
   case 0x000F:
-    bus_interface = &io_handle->int_handle->bus_interface;
-    status = bus_interface_write(bus_interface, address + io_handle->bus_interface.offset, data);
+    status = bus_interface_write(io_handle->int_bus_interface, address + io_handle->bus_interface.offset, data);
     break;
   case 0x0046:
     status = dma_start(io_handle->dma_handle, data);
