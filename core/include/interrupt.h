@@ -2,6 +2,7 @@
 #define __DMG_INTERRRUPT_H__
 
 #include <stdint.h>
+#include "bus_interface.h"
 #include "status_code.h"
 
 typedef enum
@@ -39,14 +40,12 @@ typedef struct
 {
   interrupt_registers_t regs;
   interrupt_callback_t callback;
+  bus_interface_t bus_interface;
 } interrupt_handle_t;
 
 status_code_t interrupt_init(interrupt_handle_t *const int_handle, interrupt_handler_cb_fn const callback_fn, void *callback_ctx);
 
 status_code_t request_interrupt(interrupt_handle_t *const int_handle, interrupt_type_t const int_type);
 status_code_t service_interrupt(interrupt_handle_t *const int_handle);
-
-status_code_t int_read_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const address, uint8_t *const data);
-status_code_t int_write_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const address, uint8_t const data);
 
 #endif /* __DMG_INTERRRUPT_H__ */

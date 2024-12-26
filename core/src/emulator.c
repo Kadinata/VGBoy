@@ -35,30 +35,12 @@ static status_code_t sync_callback_handler(void *const ctx, uint8_t const m_cycl
   return status;
 }
 
-status_code_t emulator_init(emulator_t *const emulator)
+static inline status_code_t module_init(emulator_t *const emulator)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
-
   status_code_t status = STATUS_OK;
 
-  emulator->ram.wram.offset = 0xC000;
-  emulator->ram.vram.offset = 0x8000;
-  emulator->ram.hram.offset = 0xFF80;
-  emulator->ram.bus_interface.offset = 0x0000;
-  emulator->oam.bus_interface.offset = 0xFE00;
-  emulator->io.bus_interface.offset = 0xFF00;
-
-  status = data_bus_init(&emulator->bus_handle);
-  RETURN_STATUS_IF_NOT_OK(status);
-
-  bus_interface_t bus_interface_ie_reg = (bus_interface_t){
-      .read = (bus_read_fn)int_read_enabled_mask,
-      .write = (bus_write_fn)int_write_enabled_mask,
-      .resource = &emulator->interrupt,
-  };
-
   cpu_init_param_t cpu_init_params = {
-      .bus_interface = emulator->bus_handle.bus_interface,
+      .bus_interface = &emulator->bus_handle.bus_interface,
       .int_handle = &emulator->interrupt,
       .sync_handle = &emulator->sync_handle,
   };
@@ -68,6 +50,9 @@ status_code_t emulator_init(emulator_t *const emulator)
       .dma_handle = &emulator->dma,
       .timer_handle = &emulator->tmr,
   };
+
+  status = data_bus_init(&emulator->bus_handle);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   status = ram_init(&emulator->ram);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -87,14 +72,18 @@ status_code_t emulator_init(emulator_t *const emulator)
   status = dma_init(&emulator->dma, emulator->bus_handle.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = data_bus_init(&emulator->bus_handle);
-  RETURN_STATUS_IF_NOT_OK(status);
-
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = timing_sync_init(&emulator->sync_handle, sync_callback_handler, (void *)emulator);
   RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
+}
+
+static inline status_code_t configure_data_bus(emulator_t *const emulator)
+{
+  status_code_t status = STATUS_OK;
 
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_ROM_BANK_0, emulator->rom.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -117,7 +106,30 @@ status_code_t emulator_init(emulator_t *const emulator)
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_IO_REG, emulator->io.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_IE_REG, bus_interface_ie_reg);
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_IE_REG, emulator->interrupt.bus_interface);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
+}
+
+status_code_t emulator_init(emulator_t *const emulator)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
+
+  status_code_t status = STATUS_OK;
+
+  emulator->ram.wram.offset = 0xC000;
+  emulator->ram.vram.offset = 0x8000;
+  emulator->ram.hram.offset = 0xFF80;
+  emulator->ram.bus_interface.offset = 0x0000;
+  emulator->oam.bus_interface.offset = 0xFE00;
+  emulator->io.bus_interface.offset = 0xFF00;
+  emulator->interrupt.bus_interface.offset = 0xFF00;
+
+  status = module_init(emulator);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = configure_data_bus(emulator);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;

@@ -79,7 +79,7 @@ typedef struct cpu_state_s
 
 typedef struct
 {
-  bus_interface_t bus_interface;
+  bus_interface_t *bus_interface;
   interrupt_handle_t *int_handle;
   timing_sync_handle_t *sync_handle;
 } cpu_init_param_t;

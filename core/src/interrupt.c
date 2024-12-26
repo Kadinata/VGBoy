@@ -1,7 +1,11 @@
 #include "interrupt.h"
 
 #include <stdint.h>
+#include "bus_interface.h"
 #include "status_code.h"
+
+#define REG_IEN_OFFSET (0xFF)
+#define REG_IRF_OFFSET (0x0F)
 
 static interrupt_vector_t interrupt_vector_table[] = {
     {.address = 0x0040, .int_type = INT_VBLANK},
@@ -11,6 +15,8 @@ static interrupt_vector_t interrupt_vector_table[] = {
     {.address = 0x0060, .int_type = INT_JOYPAD},
 };
 
+static status_code_t interrupt_reg_read(void *const resource, uint16_t const address, uint8_t *const data);
+static status_code_t interrupt_reg_write(void *const resource, uint16_t const address, uint8_t const data);
 static uint8_t handle_single_interrupt(interrupt_handle_t *const int_handle, interrupt_vector_t *const int_vector);
 
 status_code_t interrupt_init(interrupt_handle_t *const int_handle, interrupt_handler_cb_fn const callback_fn, void *callback_ctx)
@@ -25,6 +31,10 @@ status_code_t interrupt_init(interrupt_handle_t *const int_handle, interrupt_han
 
   int_handle->callback.callback_fn = callback_fn;
   int_handle->callback.callback_ctx = callback_ctx;
+
+  int_handle->bus_interface.read = interrupt_reg_read;
+  int_handle->bus_interface.write = interrupt_reg_write;
+  int_handle->bus_interface.resource = int_handle;
 
   return STATUS_OK;
 }
@@ -54,21 +64,45 @@ status_code_t service_interrupt(interrupt_handle_t *const int_handle)
   return STATUS_OK;
 }
 
-status_code_t int_read_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const __attribute__((unused)) address, uint8_t *const data)
+static status_code_t interrupt_reg_read(void *const resource, uint16_t const address, uint8_t *const data)
 {
+  interrupt_handle_t *const int_handle = (interrupt_handle_t *)resource;
+
   VERIFY_PTR_RETURN_ERROR_IF_NULL(int_handle);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
 
-  *data = int_handle->regs.ien;
+  switch (address)
+  {
+  case REG_IRF_OFFSET:
+    *data = int_handle->regs.irf;
+    break;
+  case REG_IEN_OFFSET:
+    *data = int_handle->regs.ien;
+    break;
+  default:
+    return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
+  }
 
   return STATUS_OK;
 }
 
-status_code_t int_write_enabled_mask(interrupt_handle_t *const int_handle, uint16_t const __attribute__((unused)) address, uint8_t const data)
+static status_code_t interrupt_reg_write(void *const resource, uint16_t const address, uint8_t const data)
 {
+  interrupt_handle_t *const int_handle = (interrupt_handle_t *)resource;
+
   VERIFY_PTR_RETURN_ERROR_IF_NULL(int_handle);
 
-  int_handle->regs.ien = data;
+  switch (address)
+  {
+  case REG_IRF_OFFSET:
+    int_handle->regs.irf = data;
+    break;
+  case REG_IEN_OFFSET:
+    int_handle->regs.ien = data;
+    break;
+  default:
+    return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
+  }
 
   return STATUS_OK;
 }

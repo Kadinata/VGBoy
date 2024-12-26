@@ -549,9 +549,9 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(state);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(param);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface.read, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface.write, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface.resource, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface->read, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface->write, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface->resource, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(param->int_handle, STATUS_ERR_INVALID_ARG);
 
   memset(state, 0, sizeof(cpu_state_t));
@@ -569,7 +569,7 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 
   state->run_mode = RUN_MODE_NORMAL;
 
-  memcpy(&state->bus_interface, &param->bus_interface, sizeof(bus_interface_t));
+  memcpy(&state->bus_interface, param->bus_interface, sizeof(bus_interface_t));
   state->int_handle = param->int_handle;
   state->sync_handle = param->sync_handle;
 
