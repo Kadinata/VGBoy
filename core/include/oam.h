@@ -2,6 +2,7 @@
 #define __DMG_OAM_H__
 
 #include <stdint.h>
+#include "bus_interface.h"
 #include "status_code.h"
 
 #define OAM_ATTR_CGB_PALETTE_NUM (0x7)
@@ -21,15 +22,14 @@ typedef struct
 
 typedef struct
 {
-  uint16_t offset;
   union
   {
     oam_entry_t entries[40];
     uint8_t oam_buf[sizeof(oam_entry_t) * 40];
   };
+  bus_interface_t bus_interface;
 } oam_handle_t;
 
-status_code_t oam_read(oam_handle_t *const oam_handle, uint16_t const address, uint8_t *const data);
-status_code_t oam_write(oam_handle_t *const oam_handle, uint16_t const address, uint8_t const data);
+status_code_t oam_init(oam_handle_t* const oam_handle);
 
 #endif /* __DMG_OAM_H__ */

@@ -2,7 +2,11 @@
 
 #include <stdint.h>
 #include "interrupt.h"
+#include "bus_interface.h"
 #include "status_code.h"
+
+static status_code_t timer_read(void *const resource, uint16_t const address, uint8_t *const data);
+static status_code_t timer_write(void *const resource, uint16_t const address, uint8_t const data);
 
 status_code_t timer_init(timer_handle_t *const tmr_handle, interrupt_handle_t *const int_handle)
 {
@@ -11,6 +15,10 @@ status_code_t timer_init(timer_handle_t *const tmr_handle, interrupt_handle_t *c
 
   tmr_handle->div = 0xABCC;
   tmr_handle->int_handle = int_handle;
+
+  tmr_handle->bus_interface.read = timer_read;
+  tmr_handle->bus_interface.write = timer_write;
+  tmr_handle->bus_interface.resource = tmr_handle;
 
   return STATUS_OK;
 }
@@ -23,7 +31,7 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
   uint8_t timer_update = 0;
 
   /**
-   * Always increment timer DIV at every T-cycle tick 
+   * Always increment timer DIV at every T-cycle tick
    * and determine which bits flipped from 1 to 0.
    */
   uint16_t bit_changes = (tmr_handle->div++) & (~tmr_handle->div);
@@ -60,10 +68,12 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
   return STATUS_OK;
 }
 
-status_code_t timer_read(timer_handle_t *const tmr_handle, uint16_t const address, uint8_t *const data)
+static status_code_t timer_read(void *const resource, uint16_t const address, uint8_t *const data)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
-  switch (address - tmr_handle->addr_offset)
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
+  timer_handle_t *tmr_handle = (timer_handle_t *)resource;
+
+  switch (address)
   {
   case 0: // TODO: use enum
     *data = (tmr_handle->div >> 8);
@@ -84,11 +94,12 @@ status_code_t timer_read(timer_handle_t *const tmr_handle, uint16_t const addres
   return STATUS_OK;
 }
 
-status_code_t timer_write(timer_handle_t *const tmr_handle, uint16_t const address, uint8_t const data)
+static status_code_t timer_write(void *const resource, uint16_t const address, uint8_t const data)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
+  timer_handle_t *tmr_handle = (timer_handle_t *)resource;
 
-  switch (address - tmr_handle->addr_offset)
+  switch (address)
   {
   case 0: // TODO: use enum
     tmr_handle->div = 0;

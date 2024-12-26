@@ -9,6 +9,9 @@
 static status_code_t unsupported_region_read(void *const resource, uint16_t const address, uint8_t *const data);
 static status_code_t unsupported_region_write(void *const resource, uint16_t const address, uint8_t const data);
 
+static status_code_t data_bus_read(void *const resource, uint16_t const address, uint8_t *const data);
+static status_code_t data_bus_write(void *const resource, uint16_t const address, uint8_t const data);
+
 static data_bus_segment_t unsupported_region = (data_bus_segment_t){
     .segment_type = -1,
     .interface = (bus_interface_t){
@@ -79,11 +82,14 @@ static data_bus_segment_t *get_bus_segment(data_bus_handle_t *const handle, uint
   return NULL;
 }
 
-
 // TODO: may remove
 status_code_t data_bus_init(data_bus_handle_t *const bus_handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_handle);
+
+  bus_handle->bus_interface.read = data_bus_read;
+  bus_handle->bus_interface.write = data_bus_write;
+  bus_handle->bus_interface.resource = bus_handle;
 
   return STATUS_OK;
 }
@@ -103,8 +109,10 @@ status_code_t data_bus_add_segment(
   return STATUS_OK;
 }
 
-status_code_t data_bus_read(data_bus_handle_t *const bus_handle, uint16_t const address, uint8_t *const data)
+static status_code_t data_bus_read(void *const resource, uint16_t const address, uint8_t *const data)
 {
+  data_bus_handle_t *const bus_handle = (data_bus_handle_t *)resource;
+
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_handle);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
 
@@ -119,8 +127,10 @@ status_code_t data_bus_read(data_bus_handle_t *const bus_handle, uint16_t const 
   return bus_interface_read(&bus_segment->interface, address, data);
 }
 
-status_code_t data_bus_write(data_bus_handle_t *const bus_handle, uint16_t const address, uint8_t const data)
+static status_code_t data_bus_write(void *const resource, uint16_t const address, uint8_t const data)
 {
+  data_bus_handle_t *const bus_handle = (data_bus_handle_t *)resource;
+
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_handle);
 
   data_bus_segment_t *bus_segment = get_bus_segment(bus_handle, address);

@@ -6,13 +6,28 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "bus_interface.h"
 #include "logging.h"
 #include "status_code.h"
 
 #define ROM_HEADER_ADDR (0x100)
 #define ROM_SIZE_KB(rom_size) (32 * (1 << rom_size))
 
+static status_code_t rom_read(void *const resource, uint16_t const address, uint8_t *const data);
+static status_code_t rom_write(void *const resource, uint16_t const address, uint8_t const data);
+
 static status_code_t verify_header_checksum(rom_handle_t *const handle);
+
+status_code_t rom_init(rom_handle_t *const handle)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
+
+  handle->bus_interface.read = rom_read;
+  handle->bus_interface.write = rom_write;
+  handle->bus_interface.resource = handle;
+
+  return STATUS_OK;
+}
 
 status_code_t rom_load(rom_handle_t *const handle, const char *file)
 {
@@ -98,8 +113,10 @@ static status_code_t verify_header_checksum(rom_handle_t *const handle)
   return STATUS_OK;
 }
 
-status_code_t rom_read(rom_handle_t *const handle, uint16_t const address, uint8_t *const data)
+static status_code_t rom_read(void *const resource, uint16_t const address, uint8_t *const data)
 {
+  rom_handle_t *const handle = (rom_handle_t *)resource;
+
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
@@ -109,9 +126,11 @@ status_code_t rom_read(rom_handle_t *const handle, uint16_t const address, uint8
   return STATUS_OK;
 }
 
-status_code_t rom_write(rom_handle_t *const handle, uint16_t const address, uint8_t const data)
+static status_code_t rom_write(void *const resource, uint16_t const address, uint8_t const data)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
+  rom_handle_t *const handle = (rom_handle_t *)resource;
+
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_NOT_INITIALIZED);
 

@@ -2,6 +2,7 @@
 #define __DMG_ROM_H__
 
 #include <stdint.h>
+#include "bus_interface.h"
 #include "status_code.h"
 
 /**
@@ -70,7 +71,11 @@ typedef struct
 {
   rom_header_t *header;
   uint8_t *data;
+  bus_interface_t bus_interface;
 } rom_handle_t;
+
+/** */
+status_code_t rom_init(rom_handle_t *const handle);
 
 /**
  * Open a ROM file and load its contents to the provided ROM handle.
@@ -89,8 +94,5 @@ status_code_t rom_load(rom_handle_t *const handle, const char *file);
  * @return STATUS_OK if no error, otherwise appropriate error code.
  */
 status_code_t rom_unload(rom_handle_t *const handle);
-
-status_code_t rom_read(rom_handle_t *const handle, uint16_t const address, uint8_t *const data);
-status_code_t rom_write(rom_handle_t *const handle, uint16_t const address, uint8_t const data);
 
 #endif /* __DMG_ROM_H__ */

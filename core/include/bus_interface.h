@@ -9,6 +9,7 @@ typedef status_code_t (*bus_write_fn)(void *const resource, uint16_t const addre
 
 typedef struct
 {
+  uint16_t offset;
   bus_read_fn read;
   bus_write_fn write;
   void *resource;
