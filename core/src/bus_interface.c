@@ -8,6 +8,7 @@ status_code_t bus_interface_read(bus_interface_t *const bus_interface, uint16_t 
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_interface);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(bus_interface->read, STATUS_ERR_NOT_INITIALIZED);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(address < bus_interface->offset, STATUS_ERR_ADDRESS_OUT_OF_BOUND);
 
   return bus_interface->read(bus_interface->resource, address - bus_interface->offset, data);
 }
@@ -16,6 +17,7 @@ status_code_t bus_interface_write(bus_interface_t *const bus_interface, uint16_t
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_interface);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(bus_interface->write, STATUS_ERR_NOT_INITIALIZED);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(address < bus_interface->offset, STATUS_ERR_ADDRESS_OUT_OF_BOUND);
 
   return bus_interface->write(bus_interface->resource, address - bus_interface->offset, data);
 }
