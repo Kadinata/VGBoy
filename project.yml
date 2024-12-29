@@ -35,10 +35,12 @@
     - -:test/support
   :source:
     - core/src/**
+    - common/**
   :support:
     - test/support
   :include:
     - core/include/**
+    - common/**
   :libraries: []
 
 :defines:
