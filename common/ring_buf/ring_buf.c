@@ -88,3 +88,13 @@ size_t ring_buffer_size(ring_buffer_t *const buf)
   }
   return (BUF_SIZE(buf) / buf->item_size);
 }
+
+bool ring_buffer_flush(ring_buffer_t *const buf)
+{
+  VERIFY_COND(buf != NULL);
+
+  buf->read_ptr = buf->write_ptr;
+  buf->status = BUFFER_EMPTY;
+
+  return true;
+}
