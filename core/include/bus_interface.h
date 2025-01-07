@@ -15,6 +15,7 @@ typedef struct
   void *resource;
 } bus_interface_t;
 
+status_code_t bus_interface_init(bus_interface_t *const bus_interface, const bus_read_fn read_fn, const bus_write_fn write_fn, void *const resource);
 status_code_t bus_interface_read(bus_interface_t *const bus_interface, uint16_t const address, uint8_t *const data);
 status_code_t bus_interface_write(bus_interface_t *const bus_interface, uint16_t const address, uint8_t const data);
 

@@ -3,6 +3,19 @@
 #include <stdint.h>
 #include "status_code.h"
 
+status_code_t bus_interface_init(bus_interface_t *const bus_interface, const bus_read_fn read_fn, const bus_write_fn write_fn, void *const resource)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_interface);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(read_fn);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(write_fn);
+
+  bus_interface->read = read_fn;
+  bus_interface->write = write_fn;
+  bus_interface->resource = resource;
+
+  return STATUS_OK;
+}
+
 status_code_t bus_interface_read(bus_interface_t *const bus_interface, uint16_t const address, uint8_t *const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_interface);
