@@ -9,6 +9,7 @@
 #include "oam.h"
 #include "io.h"
 #include "dma.h"
+#include "ppu.h"
 #include "timer.h"
 #include "timing_sync.h"
 #include "logging.h"
@@ -25,6 +26,9 @@ static status_code_t sync_callback_handler(void *const ctx, uint8_t const m_cycl
     for (uint8_t t = 0; t < 4; t++)
     {
       status = timer_tick(&emulator->tmr);
+      RETURN_STATUS_IF_NOT_OK(status);
+
+      status = ppu_tick(&emulator->ppu);
       RETURN_STATUS_IF_NOT_OK(status);
     }
 
@@ -48,8 +52,13 @@ static inline status_code_t module_init(emulator_t *const emulator)
   io_init_param_t io_init_params = {
       .dma_handle = &emulator->dma,
       .int_bus_interface = &emulator->interrupt.bus_interface,
-      .lcd_bus_interface = &emulator->lcd.bus_interface,
+      .lcd_bus_interface = &emulator->ppu.lcd.bus_interface,
       .timer_bus_interface = &emulator->tmr.bus_interface,
+  };
+
+  ppu_init_param_t ppu_init_params = {
+      .bus_interface = &emulator->bus_handle.bus_interface,
+      .interrupt = &emulator->interrupt,
   };
 
   status = data_bus_init(&emulator->bus_handle);
@@ -61,12 +70,6 @@ static inline status_code_t module_init(emulator_t *const emulator)
   status = rom_init(&emulator->rom);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = oam_init(&emulator->oam);
-  RETURN_STATUS_IF_NOT_OK(status);
-
-  status = lcd_init(&emulator->lcd);
-  RETURN_STATUS_IF_NOT_OK(status);
-
   status = timer_init(&emulator->tmr, &emulator->interrupt);
   RETURN_STATUS_IF_NOT_OK(status);
 
@@ -74,6 +77,9 @@ static inline status_code_t module_init(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = dma_init(&emulator->dma, emulator->bus_handle.bus_interface);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = ppu_init(&emulator->ppu, &ppu_init_params);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);
@@ -104,7 +110,7 @@ static inline status_code_t configure_data_bus(emulator_t *const emulator)
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_EXT_RAM, emulator->rom.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_OAM, emulator->oam.bus_interface);
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_OAM, emulator->ppu.oam.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_HRAM, emulator->ram.bus_interface);
@@ -129,7 +135,7 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->ram.vram.offset = 0x8000;
   emulator->ram.hram.offset = 0xFF80;
   emulator->ram.bus_interface.offset = 0x0000;
-  emulator->oam.bus_interface.offset = 0xFE00;
+  emulator->ppu.oam.bus_interface.offset = 0xFE00;
   emulator->io.bus_interface.offset = 0xFF00;
   emulator->interrupt.bus_interface.offset = 0xFF00;
 

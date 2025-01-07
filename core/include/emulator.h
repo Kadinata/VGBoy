@@ -7,10 +7,9 @@
 #include "data_bus.h"
 #include "rom.h"
 #include "ram.h"
-#include "oam.h"
 #include "io.h"
 #include "dma.h"
-#include "lcd.h"
+#include "ppu.h"
 #include "timer.h"
 #include "timing_sync.h"
 #include "status_code.h"
@@ -21,11 +20,10 @@ typedef struct
   data_bus_handle_t bus_handle;
   rom_handle_t rom;
   ram_handle_t ram;
-  oam_handle_t oam;
   io_handle_t io;
   timer_handle_t tmr;
   dma_handle_t dma;
-  lcd_handle_t lcd;
+  ppu_handle_t ppu;
   interrupt_handle_t interrupt;
   timing_sync_handle_t sync_handle;
 } emulator_t;
