@@ -32,11 +32,7 @@ status_code_t interrupt_init(interrupt_handle_t *const int_handle, interrupt_han
   int_handle->callback.callback_fn = callback_fn;
   int_handle->callback.callback_ctx = callback_ctx;
 
-  int_handle->bus_interface.read = interrupt_reg_read;
-  int_handle->bus_interface.write = interrupt_reg_write;
-  int_handle->bus_interface.resource = int_handle;
-
-  return STATUS_OK;
+  return bus_interface_init(&int_handle->bus_interface, interrupt_reg_read, interrupt_reg_write, int_handle);
 }
 
 status_code_t request_interrupt(interrupt_handle_t *const int_handle, interrupt_type_t const int_type)

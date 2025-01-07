@@ -16,12 +16,9 @@ status_code_t ram_init(ram_handle_t *const ram_handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(ram_handle);
 
-  ram_handle->bus_interface.read = ram_read;
-  ram_handle->bus_interface.write = ram_write;
   ram_handle->bus_interface.offset = 0x0000;
-  ram_handle->bus_interface.resource = ram_handle;
 
-  return STATUS_OK;
+  return bus_interface_init(&ram_handle->bus_interface, ram_read, ram_write, ram_handle);
 }
 
 static status_code_t ram_read(void *const resource, uint16_t const address, uint8_t *const data)

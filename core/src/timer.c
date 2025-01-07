@@ -16,11 +16,7 @@ status_code_t timer_init(timer_handle_t *const tmr_handle, interrupt_handle_t *c
   tmr_handle->div = 0xABCC;
   tmr_handle->int_handle = int_handle;
 
-  tmr_handle->bus_interface.read = timer_read;
-  tmr_handle->bus_interface.write = timer_write;
-  tmr_handle->bus_interface.resource = tmr_handle;
-
-  return STATUS_OK;
+  return bus_interface_init(&tmr_handle->bus_interface, timer_read, timer_write, tmr_handle);
 }
 
 status_code_t timer_tick(timer_handle_t *const tmr_handle)

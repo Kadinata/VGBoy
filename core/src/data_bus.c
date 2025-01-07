@@ -82,16 +82,11 @@ static data_bus_segment_t *get_bus_segment(data_bus_handle_t *const handle, uint
   return NULL;
 }
 
-// TODO: may remove
 status_code_t data_bus_init(data_bus_handle_t *const bus_handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(bus_handle);
 
-  bus_handle->bus_interface.read = data_bus_read;
-  bus_handle->bus_interface.write = data_bus_write;
-  bus_handle->bus_interface.resource = bus_handle;
-
-  return STATUS_OK;
+  return bus_interface_init(&bus_handle->bus_interface, data_bus_read, data_bus_write, bus_handle);
 }
 
 status_code_t data_bus_add_segment(

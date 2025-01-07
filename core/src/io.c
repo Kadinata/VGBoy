@@ -25,14 +25,10 @@ status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_
   io_handle->lcd_bus_interface = init_param->lcd_bus_interface;
   io_handle->timer_bus_interface = init_param->timer_bus_interface;
 
-  io_handle->bus_interface.read = io_read;
-  io_handle->bus_interface.write = io_write;
-  io_handle->bus_interface.resource = io_handle;
-
   io_handle->timer_bus_interface->offset = 0x0004;
   io_handle->lcd_bus_interface->offset = 0x0040;
 
-  return STATUS_OK;
+  return bus_interface_init(&io_handle->bus_interface, io_read, io_write, io_handle);
 }
 
 static status_code_t io_read(void *const resource, uint16_t const address, uint8_t *const data)

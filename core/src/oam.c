@@ -23,12 +23,9 @@ status_code_t oam_init(oam_handle_t *const oam_handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(oam_handle);
 
-  oam_handle->bus_interface.read = oam_read;
-  oam_handle->bus_interface.write = oam_write;
-  oam_handle->bus_interface.resource = oam_handle;
   memset(oam_handle->entries, 0, sizeof(oam_handle->entries));
 
-  return STATUS_OK;
+  return bus_interface_init(&oam_handle->bus_interface, oam_read, oam_write, oam_handle);
 }
 
 status_code_t oam_scan(oam_handle_t *const oam_handle, uint8_t const line_y, obj_size_t const sprite_size, oam_scanned_sprites_t *const scan_results)

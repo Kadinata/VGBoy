@@ -22,11 +22,7 @@ status_code_t rom_init(rom_handle_t *const handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
 
-  handle->bus_interface.read = rom_read;
-  handle->bus_interface.write = rom_write;
-  handle->bus_interface.resource = handle;
-
-  return STATUS_OK;
+  return bus_interface_init(&handle->bus_interface, rom_read, rom_write, handle);
 }
 
 status_code_t rom_load(rom_handle_t *const handle, const char *file)
@@ -134,6 +130,8 @@ static status_code_t rom_write(void *const resource, uint16_t const address, uin
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_NOT_INITIALIZED);
 
-  handle->data[address] = data; // TODO: do address verification
+  // handle->data[address] = data; // TODO: do address verification
+
+  Log_I("ROM write: 0x%04X", address);
   return STATUS_OK;
 }
