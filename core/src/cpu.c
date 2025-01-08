@@ -4,9 +4,10 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "timing_sync.h"
 #include "status_code.h"
 #include "logging.h"
+#include "callback.h"
+#include "bus_interface.h"
 #include "debug_serial.h"
 
 #define INST(handler_fn, dest_operand, src_operand, inst_length, cycle, alt_cycle) \
@@ -571,7 +572,7 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
 
   memcpy(&state->bus_interface, param->bus_interface, sizeof(bus_interface_t));
   state->int_handle = param->int_handle;
-  state->sync_handle = param->sync_handle;
+  state->cycle_sync_callback = param->cycle_sync_callback;
 
   return interrupt_init(state->int_handle, handle_interrupt, state);
 }
@@ -582,6 +583,9 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
 
   status_code_t status = STATUS_OK;
   // registers_t *const regs = &state->registers;
+
+  // static uint64_t count = 0;
+  // char flags[16];
 
   if (state->run_mode == RUN_MODE_NORMAL)
   {
@@ -594,7 +598,14 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
 
     instruction_t *const inst = &inst_table[opcode];
 
-    // Log_D("Exec [%04X] -- %02X", pc, opcode);
+    // sprintf(flags, "%c%c%c%c",
+    //         regs->f & FLAG_Z ? 'Z' : '-',
+    //         regs->f & FLAG_N ? 'N' : '-',
+    //         regs->f & FLAG_H ? 'H' : '-',
+    //         regs->f & FLAG_C ? 'C' : '-');
+    // Log_D(
+    //     "%llu - %04X: %02X A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X",
+    //     ++count, pc, opcode, regs->a, flags, regs->b, regs->c, regs->d, regs->e, regs->h, regs->l);
 
     status = inst->handler(state, &inst->operands);
     RETURN_STATUS_IF_NOT_OK(status);
@@ -652,9 +663,9 @@ static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle
   state->m_cycles += m_cycle_count;
   state->current_inst_m_cycle_count += m_cycle_count;
 
-  if (state->sync_handle)
+  if (state->cycle_sync_callback)
   {
-    return timing_m_cycle_sync(state->sync_handle, m_cycle_count);
+    return callback_call(state->cycle_sync_callback, &m_cycle_count);
   }
 
   return STATUS_OK;

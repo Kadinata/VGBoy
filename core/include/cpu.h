@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 
-#include "status_code.h"
-#include "interrupt.h"
-#include "timing_sync.h"
 #include "bus_interface.h"
+#include "callback.h"
+#include "interrupt.h"
+#include "status_code.h"
 
 /* Address of entry point */
 #define ENTRY_PT_ADDR (0x100)
@@ -73,7 +73,7 @@ typedef struct cpu_state_s
   uint8_t next_ime_flag;
   interrupt_handle_t *int_handle;
   bus_interface_t bus_interface;
-  timing_sync_handle_t *sync_handle;
+  callback_t *cycle_sync_callback;
   uint8_t current_inst_m_cycle_count; // TODO: find more elegant solution
 } cpu_state_t;
 
@@ -81,7 +81,7 @@ typedef struct
 {
   bus_interface_t *bus_interface;
   interrupt_handle_t *int_handle;
-  timing_sync_handle_t *sync_handle;
+  callback_t *cycle_sync_callback;
 } cpu_init_param_t;
 
 status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param);

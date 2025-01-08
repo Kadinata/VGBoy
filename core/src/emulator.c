@@ -12,14 +12,15 @@
 #include "joypad.h"
 #include "ppu.h"
 #include "timer.h"
-#include "timing_sync.h"
 #include "logging.h"
 #include "bus_interface.h"
 #include "status_code.h"
+#include "callback.h"
 
-static status_code_t sync_callback_handler(void *const ctx, uint8_t const m_cycle_count)
+static status_code_t sync_callback_handler(void *const ctx, const void *arg)
 {
   emulator_t *const emulator = (emulator_t *)ctx;
+  uint8_t const m_cycle_count = *(uint8_t *)arg;
   status_code_t status = STATUS_OK;
 
   for (uint8_t m = 0; m < m_cycle_count; m++)
@@ -47,7 +48,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
   cpu_init_param_t cpu_init_params = {
       .bus_interface = &emulator->bus_handle.bus_interface,
       .int_handle = &emulator->interrupt,
-      .sync_handle = &emulator->sync_handle,
+      .cycle_sync_callback = &emulator->cycle_sync_callback,
   };
 
   io_init_param_t io_init_params = {
@@ -90,7 +91,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = timing_sync_init(&emulator->sync_handle, sync_callback_handler, (void *)emulator);
+  status = callback_init(&emulator->cycle_sync_callback, sync_callback_handler, (void *)emulator);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;

@@ -12,8 +12,8 @@
 #include "joypad.h"
 #include "ppu.h"
 #include "timer.h"
-#include "timing_sync.h"
 #include "status_code.h"
+#include "callback.h"
 
 typedef struct
 {
@@ -27,7 +27,7 @@ typedef struct
   ppu_handle_t ppu;
   joypad_handle_t joypad;
   interrupt_handle_t interrupt;
-  timing_sync_handle_t sync_handle;
+  callback_t cycle_sync_callback;
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);
