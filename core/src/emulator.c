@@ -9,6 +9,7 @@
 #include "oam.h"
 #include "io.h"
 #include "dma.h"
+#include "joypad.h"
 #include "ppu.h"
 #include "timer.h"
 #include "timing_sync.h"
@@ -54,6 +55,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
       .int_bus_interface = &emulator->interrupt.bus_interface,
       .lcd_bus_interface = &emulator->ppu.lcd.bus_interface,
       .timer_bus_interface = &emulator->tmr.bus_interface,
+      .joypad_bus_interface = &emulator->joypad.bus_interface,
   };
 
   ppu_init_param_t ppu_init_params = {
@@ -71,6 +73,9 @@ static inline status_code_t module_init(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = timer_init(&emulator->tmr, &emulator->interrupt);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = joypad_init(&emulator->joypad);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = io_init(&emulator->io, &io_init_params);

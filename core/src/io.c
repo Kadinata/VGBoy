@@ -18,11 +18,13 @@ status_code_t io_init(io_handle_t *const io_handle, io_init_param_t *const init_
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->dma_handle, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->lcd_bus_interface, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->int_bus_interface, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->joypad_bus_interface, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(init_param->timer_bus_interface, STATUS_ERR_INVALID_ARG);
 
   io_handle->dma_handle = init_param->dma_handle;
   io_handle->int_bus_interface = init_param->int_bus_interface;
   io_handle->lcd_bus_interface = init_param->lcd_bus_interface;
+  io_handle->joypad_bus_interface = init_param->joypad_bus_interface;
   io_handle->timer_bus_interface = init_param->timer_bus_interface;
 
   io_handle->timer_bus_interface->offset = 0x0004;
@@ -41,6 +43,9 @@ static status_code_t io_read(void *const resource, uint16_t const address, uint8
 
   switch (address)
   {
+  case 0x0000:
+    status = bus_interface_read(io_handle->joypad_bus_interface, address, data);
+    break;
   case 0x0001:
     serial_read(0, data);
     break;
@@ -85,6 +90,9 @@ static status_code_t io_write(void *const resource, uint16_t const address, uint
 
   switch (address)
   {
+  case 0x0000:
+    status = bus_interface_write(io_handle->joypad_bus_interface, address, data);
+    break;
   case 0x0001:
     serial_write(0, data);
     break;
