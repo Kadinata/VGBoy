@@ -16,6 +16,7 @@
 #include "bus_interface.h"
 #include "status_code.h"
 #include "callback.h"
+#include "logging.h"
 
 static status_code_t sync_callback_handler(void *const ctx, const void *arg)
 {
@@ -47,13 +48,12 @@ static inline status_code_t module_init(emulator_t *const emulator)
 
   cpu_init_param_t cpu_init_params = {
       .bus_interface = &emulator->bus_handle.bus_interface,
-      .int_handle = &emulator->interrupt,
       .cycle_sync_callback = &emulator->cycle_sync_callback,
   };
 
   io_init_param_t io_init_params = {
       .dma_handle = &emulator->dma,
-      .int_bus_interface = &emulator->interrupt.bus_interface,
+      .int_bus_interface = &emulator->cpu_state.interrupt.bus_interface,
       .lcd_bus_interface = &emulator->ppu.lcd.bus_interface,
       .timer_bus_interface = &emulator->tmr.bus_interface,
       .joypad_bus_interface = &emulator->joypad.bus_interface,
@@ -61,7 +61,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
 
   ppu_init_param_t ppu_init_params = {
       .bus_interface = &emulator->bus_handle.bus_interface,
-      .interrupt = &emulator->interrupt,
+      .interrupt = &emulator->cpu_state.interrupt,
   };
 
   status = data_bus_init(&emulator->bus_handle);
@@ -73,7 +73,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
   status = rom_init(&emulator->rom);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = timer_init(&emulator->tmr, &emulator->interrupt);
+  status = timer_init(&emulator->tmr, &emulator->cpu_state.interrupt);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = joypad_init(&emulator->joypad);
@@ -125,7 +125,7 @@ static inline status_code_t configure_data_bus(emulator_t *const emulator)
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_IO_REG, emulator->io.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_IE_REG, emulator->interrupt.bus_interface);
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_IE_REG, emulator->cpu_state.interrupt.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;
@@ -143,7 +143,7 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->ram.bus_interface.offset = 0x0000;
   emulator->ppu.oam.bus_interface.offset = 0xFE00;
   emulator->io.bus_interface.offset = 0xFF00;
-  emulator->interrupt.bus_interface.offset = 0xFF00;
+  emulator->cpu_state.interrupt.bus_interface.offset = 0xFF00;
 
   status = module_init(emulator);
   RETURN_STATUS_IF_NOT_OK(status);

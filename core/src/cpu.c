@@ -153,7 +153,7 @@ static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t addre
 static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t address, uint16_t *const data);
 static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data);
 
-static status_code_t handle_interrupt(void *const ctx, uint16_t const isr_address);
+static status_code_t handle_interrupt(void *const ctx, const void* arg);
 static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle_count);
 
 status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
@@ -553,9 +553,8 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
   VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface->read, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface->write, STATUS_ERR_INVALID_ARG);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(param->bus_interface->resource, STATUS_ERR_INVALID_ARG);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(param->int_handle, STATUS_ERR_INVALID_ARG);
 
-  memset(state, 0, sizeof(cpu_state_t));
+  status_code_t status = STATUS_OK;
 
   state->registers.pc = ENTRY_PT_ADDR;
   state->registers.sp = 0xFFFE;
@@ -571,10 +570,15 @@ status_code_t cpu_init(cpu_state_t *const state, cpu_init_param_t *const param)
   state->run_mode = RUN_MODE_NORMAL;
 
   memcpy(&state->bus_interface, param->bus_interface, sizeof(bus_interface_t));
-  state->int_handle = param->int_handle;
   state->cycle_sync_callback = param->cycle_sync_callback;
 
-  return interrupt_init(state->int_handle, handle_interrupt, state);
+  status = callback_init(&state->interrupt_callback, handle_interrupt, state);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = interrupt_init(&state->interrupt, &state->interrupt_callback);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t cpu_emulation_cycle(cpu_state_t *const state)
@@ -627,7 +631,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
   else if (state->run_mode == RUN_MODE_HALTED)
   {
     sync_cycles(state, 1);
-    if (state->int_handle->regs.irf) // TODO: create interface (?)
+    if (state->interrupt.regs.irf) // TODO: create interface (?)
     {
       state->run_mode = RUN_MODE_NORMAL;
     }
@@ -638,16 +642,15 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
     return STATUS_ERR_GENERIC;
   }
 
-  if (state->int_handle->regs.ime) // TODO: create interface (?)
+  if (state->interrupt.regs.ime) // TODO: create interface (?)
   {
-    // Log_D("servicing interrupt: 0x%02X", state->int_handle->int_requested_flag);
-    status = service_interrupt(state->int_handle);
+    status = service_interrupt(&state->interrupt);
     state->next_ime_flag = 0;
   }
 
   if (state->next_ime_flag)
   {
-    state->int_handle->regs.ime = 1; // TODO: create interface (?)
+    state->interrupt.regs.ime = 1; // TODO: create interface (?)
   }
 
   return STATUS_OK;
@@ -671,10 +674,11 @@ static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle
   return STATUS_OK;
 }
 
-static status_code_t handle_interrupt(void *const ctx, uint16_t const isr_address)
+static status_code_t handle_interrupt(void *const ctx, const void *arg)
 {
   status_code_t status = STATUS_OK;
   cpu_state_t *const state = (cpu_state_t *)ctx;
+  uint16_t const isr_address = *(uint16_t *)arg;
 
   /**
    * Save current instruction to the stack and go to
@@ -1529,13 +1533,13 @@ status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribut
 
 status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
-  state->int_handle->regs.ime = 1;
+  state->interrupt.regs.ime = 1;
   return pop_reg_16(state, &state->registers.pc);
 }
 
 status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
-  state->int_handle->regs.ime = 0;
+  state->interrupt.regs.ime = 0;
   state->next_ime_flag = 0;
   return STATUS_OK;
 }

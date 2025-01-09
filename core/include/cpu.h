@@ -71,7 +71,8 @@ typedef struct cpu_state_s
   uint32_t m_cycles;
   cpu_runmode_t run_mode;
   uint8_t next_ime_flag;
-  interrupt_handle_t *int_handle;
+  interrupt_handle_t interrupt;
+  callback_t interrupt_callback;
   bus_interface_t bus_interface;
   callback_t *cycle_sync_callback;
   uint8_t current_inst_m_cycle_count; // TODO: find more elegant solution
@@ -80,7 +81,6 @@ typedef struct cpu_state_s
 typedef struct
 {
   bus_interface_t *bus_interface;
-  interrupt_handle_t *int_handle;
   callback_t *cycle_sync_callback;
 } cpu_init_param_t;
 

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "bus_interface.h"
+#include "callback.h"
 #include "status_code.h"
 
 #define REG_IEN_OFFSET (0xFF)
@@ -19,18 +20,15 @@ static status_code_t interrupt_reg_read(void *const resource, uint16_t const add
 static status_code_t interrupt_reg_write(void *const resource, uint16_t const address, uint8_t const data);
 static uint8_t handle_single_interrupt(interrupt_handle_t *const int_handle, interrupt_vector_t *const int_vector);
 
-status_code_t interrupt_init(interrupt_handle_t *const int_handle, interrupt_handler_cb_fn const callback_fn, void *callback_ctx)
+status_code_t interrupt_init(interrupt_handle_t *const int_handle, callback_t *const interrupt_cb)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(int_handle);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(callback_fn);
-  VERIFY_COND_RETURN_STATUS_IF_TRUE(int_handle->callback.callback_fn != NULL, STATUS_ERR_ALREADY_INITIALIZED);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(interrupt_cb);
 
   int_handle->regs.ime = 0;
   int_handle->regs.irf = 0;
   int_handle->regs.ien = 0;
-
-  int_handle->callback.callback_fn = callback_fn;
-  int_handle->callback.callback_ctx = callback_ctx;
+  int_handle->callback = interrupt_cb;
 
   return bus_interface_init(&int_handle->bus_interface, interrupt_reg_read, interrupt_reg_write, int_handle);
 }
@@ -52,9 +50,9 @@ status_code_t service_interrupt(interrupt_handle_t *const int_handle)
   {
     if (handle_single_interrupt(int_handle, &interrupt_vector_table[i]))
     {
-      interrupt_callback_t *const callback = &int_handle->callback;
-      VERIFY_COND_RETURN_STATUS_IF_TRUE(callback->callback_fn == NULL, STATUS_OK);
-      return callback->callback_fn(callback->callback_ctx, interrupt_vector_table[i].address);
+      uint16_t const isr_address = interrupt_vector_table[i].address;
+      VERIFY_COND_RETURN_STATUS_IF_TRUE(int_handle->callback->callback_fn == NULL, STATUS_OK);
+      return callback_call(int_handle->callback, &isr_address);
     }
   }
   return STATUS_OK;

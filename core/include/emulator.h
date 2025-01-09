@@ -26,7 +26,6 @@ typedef struct
   dma_handle_t dma;
   ppu_handle_t ppu;
   joypad_handle_t joypad;
-  interrupt_handle_t interrupt;
   callback_t cycle_sync_callback;
 } emulator_t;
 
