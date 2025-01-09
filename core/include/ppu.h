@@ -4,19 +4,12 @@
 #include <stdint.h>
 
 #include "bus_interface.h"
+#include "callback.h"
 #include "interrupt.h"
 #include "lcd.h"
 #include "oam.h"
 #include "pixel_fifo.h"
 #include "status_code.h"
-
-typedef status_code_t (*fps_sync_callback_fn)(void *const ctx);
-
-typedef struct
-{
-  fps_sync_callback_fn callback;
-  void *ctx;
-} fps_sync_handler_t;
 
 typedef struct
 {
@@ -24,7 +17,7 @@ typedef struct
   oam_handle_t oam;
   interrupt_handle_t *interrupt;
   pxfifo_handle_t pxfifo;
-  fps_sync_handler_t fps_sync_handler;
+  callback_t fps_sync_callback;
   uint32_t current_frame;
   uint32_t line_ticks;
   uint32_t video_buffer[SCREEN_HEIGHT * SCREEN_WIDTH];
@@ -38,6 +31,6 @@ typedef struct
 
 status_code_t ppu_init(ppu_handle_t *const ppu, ppu_init_param_t *const param);
 status_code_t ppu_tick(ppu_handle_t *const ppu);
-status_code_t ppu_register_fps_sync_handler(ppu_handle_t *const ppu, fps_sync_handler_t fps_sync_handler);
+status_code_t ppu_register_fps_sync_callback(ppu_handle_t *const ppu, callback_t *const fps_sync_callback);
 
 #endif /* __DMG_PPU_H__ */

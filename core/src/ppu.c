@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "bus_interface.h"
+#include "callback.h"
 #include "oam.h"
 #include "lcd.h"
 #include "interrupt.h"
@@ -27,9 +29,9 @@ static inline void load_video_buffer(ppu_handle_t *const ppu, pixel_data_t *cons
 
 static inline status_code_t fps_sync(ppu_handle_t *const ppu)
 {
-  if (ppu->fps_sync_handler.callback)
+  if (ppu->fps_sync_callback.callback_fn)
   {
-    return ppu->fps_sync_handler.callback(ppu->fps_sync_handler.ctx);
+    return callback_call(&ppu->fps_sync_callback, NULL);
   }
   return STATUS_OK;
 }
@@ -197,9 +199,7 @@ status_code_t ppu_init(ppu_handle_t *const ppu, ppu_init_param_t *const param)
       .lcd_handle = &ppu->lcd,
   };
 
-  // ppu_handle->lcd_handle = param->lcd_handle;
   ppu->interrupt = param->interrupt;
-  // ppu_handle->oam_handle = param->oam_handle;
   ppu->current_frame = 0;
   ppu->line_ticks = 0;
   memset(ppu->video_buffer, 0, SCREEN_HEIGHT * SCREEN_WIDTH * sizeof(uint32_t));
@@ -245,12 +245,12 @@ status_code_t ppu_tick(ppu_handle_t *const ppu)
   return status;
 }
 
-status_code_t ppu_register_fps_sync_handler(ppu_handle_t *const ppu, fps_sync_handler_t fps_sync_handler)
+status_code_t ppu_register_fps_sync_callback(ppu_handle_t *const ppu, callback_t *const fps_sync_callback)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(ppu);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(fps_sync_handler.callback, STATUS_ERR_INVALID_ARG);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(fps_sync_callback->callback_fn, STATUS_ERR_NOT_INITIALIZED);
 
-  memcpy(&ppu->fps_sync_handler, &fps_sync_handler, sizeof(fps_sync_handler_t));
+  memcpy(&ppu->fps_sync_callback, fps_sync_callback, sizeof(callback_t));
 
   return STATUS_OK;
 }
