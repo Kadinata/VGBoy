@@ -81,7 +81,7 @@ static status_code_t oam_write(void *const resource, uint16_t const address, uin
 
 static inline bool scanline_intersects_sprite(oam_entry_t *oam_entry, uint8_t line_y, obj_size_t sprite_size)
 {
-  return ((oam_entry->y_pos <= (line_y + 16)) && (oam_entry->y_pos + sprite_size) > (line_y + 16));
+  return (((oam_entry->y_pos <= (line_y + 16)) && (oam_entry->y_pos + sprite_size) > (line_y + 16)) && (oam_entry->x_pos != 0));
 }
 
 static int sort_compare(const void *value_1, const void *value_2)
