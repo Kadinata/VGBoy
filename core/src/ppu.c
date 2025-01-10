@@ -42,17 +42,10 @@ static inline void lcd_set_mode(lcd_handle_t *const lcd_handle, lcd_mode_t mode)
   lcd_handle->registers.lcd_stat |= (mode & LCD_STAT_PPU_MODE);
 }
 
-static status_code_t increment_ly(ppu_handle_t *const ppu)
+static status_code_t lyc_interrupt_check(ppu_handle_t *const ppu)
 {
   status_code_t status = STATUS_OK;
   lcd_registers_t *const lcd_regs = &ppu->lcd.registers;
-
-  if (lcd_window_visible(&ppu->lcd) && (lcd_regs->ly >= lcd_regs->window_y) && (lcd_regs->ly < lcd_regs->window_y + SCREEN_HEIGHT))
-  {
-    ppu->pxfifo.pixel_fetcher.window_line++;
-  }
-
-  lcd_regs->ly++;
 
   if (lcd_regs->ly != lcd_regs->ly_comp)
   {
@@ -69,6 +62,20 @@ static status_code_t increment_ly(ppu_handle_t *const ppu)
   }
 
   return STATUS_OK;
+}
+
+static status_code_t increment_ly(ppu_handle_t *const ppu)
+{
+  lcd_registers_t *const lcd_regs = &ppu->lcd.registers;
+
+  if (lcd_window_visible(&ppu->lcd) && (lcd_regs->ly >= lcd_regs->window_y) && (lcd_regs->ly < lcd_regs->window_y + SCREEN_HEIGHT))
+  {
+    ppu->pxfifo.pixel_fetcher.window_line++;
+  }
+
+  lcd_regs->ly++;
+
+  return lyc_interrupt_check(ppu);
 }
 
 static status_code_t handle_mode_oam_scan(ppu_handle_t *const ppu)
@@ -125,19 +132,28 @@ static status_code_t handle_mode_vblank(ppu_handle_t *const ppu)
 {
   status_code_t status = STATUS_OK;
 
+  /** If LY == 153, it resets to 0 after 4 ticks */
+  if ((ppu->lcd.registers.ly == 153) && (ppu->line_ticks == 4))
+  {
+    ppu->lcd.registers.ly = 0;
+    ppu->pxfifo.pixel_fetcher.window_line = 0;
+    status = lyc_interrupt_check(ppu);
+    RETURN_STATUS_IF_NOT_OK(status);
+  }
+
   if (ppu->line_ticks < TICKS_PER_LINE)
   {
     return STATUS_OK;
   }
 
-  status = increment_ly(ppu);
-  RETURN_STATUS_IF_NOT_OK(status);
-
-  if (ppu->lcd.registers.ly >= LINES_PER_FRAME)
+  if (ppu->lcd.registers.ly == 0)
   {
     lcd_set_mode(&ppu->lcd, MODE_OAM_SCAN);
-    ppu->lcd.registers.ly = 0;
-    ppu->pxfifo.pixel_fetcher.window_line = 0;
+  }
+  else
+  {
+    status = increment_ly(ppu);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
 
   ppu->line_ticks = 0;
