@@ -31,8 +31,8 @@ typedef enum
   LCD_CTRL_BGW_EN = (1 << 0),          /** Indicates whether or not the PPU should render background and window tiles */
   LCD_CTRL_OBJ_EN = (1 << 1),          /** Indicates whether or not the PPU should render sprite / object tiles */
   LCD_CTRL_OBJ_SIZE = (1 << 2),        /** Indicates whether sprites are 8-bit or 16-bit tall */
-  LCD_CTRL_BG_TILE_MAP = (1 << 3),     /** If set to 0: tile map starts at 0x9800; If set t0 1: 0x9C00 */
-  LCD_CTRL_BGW_TILE_DATA = (1 << 4),   /** If set to 0: tile data starts at 0x8800; If set t0 1: 0x8000 */
+  LCD_CTRL_BG_TILE_MAP = (1 << 3),     /** If set to 0: tile map starts at 0x9800; If set to 1: 0x9C00 */
+  LCD_CTRL_BGW_TILE_DATA = (1 << 4),   /** If set to 0: tile data starts at 0x8800; If set to 1: 0x8000 */
   LCD_CTRL_WINDOW_EN = (1 << 5),       /** Indicates whether or not the PPU should render window tiles */
   LCD_CTRL_WINDOW_TILE_MAP = (1 << 6), /** If set to 0: tile map starts at 0x9800; If set t0 1: 0x9C00 */
   LCD_CTRL_LCD_PPU_EN = (1 << 7),      /** If set to 0, the LCD is turned off */
