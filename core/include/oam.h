@@ -79,7 +79,7 @@ status_code_t oam_init(oam_handle_t *const oam_handle);
  * @param sprite_size Indicates whether the sprite is 8 pixels or 16 pixels tall, as determined by bit-2 of the LCDC register
  * @param scan_results Pointer to a scan result object to store the scanned sprites.
  *
- * @return `STATUS_OK` if initialization is successful, otherwise appropriate error code.
+ * @return `STATUS_OK` if scan is successful, otherwise appropriate error code.
  */
 status_code_t oam_scan(oam_handle_t *const oam_handle, uint8_t const line_y, obj_size_t const sprite_size, oam_scanned_sprites_t *const scan_results);
 
