@@ -687,6 +687,8 @@ static status_code_t handle_interrupt(void *const ctx, const void *arg)
   status = push_reg_16(state, &state->registers.pc);
   RETURN_STATUS_IF_NOT_OK(status);
 
+  sync_cycles(state, 2);
+
   state->registers.pc = isr_address;
 
   /* Exit HALT mode if tthe CPU is currently halted */
