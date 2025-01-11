@@ -30,6 +30,7 @@ typedef struct
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);
+status_code_t emulator_load_cartridge(emulator_t *const emulator, const char *file);
 status_code_t emulator_cleanup(emulator_t *const emulator);
 
 #endif /* __DMG_EMULATOR_H__ */

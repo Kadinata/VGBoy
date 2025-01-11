@@ -155,6 +155,11 @@ status_code_t emulator_init(emulator_t *const emulator)
   return STATUS_OK;
 }
 
+status_code_t emulator_load_cartridge(emulator_t *const emulator, const char *file)
+{
+  return mbc_load_rom(&emulator->mbc, file);
+}
+
 status_code_t emulator_cleanup(emulator_t *const emulator)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
