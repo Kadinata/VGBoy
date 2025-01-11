@@ -212,7 +212,7 @@ status_code_t ppu_init(ppu_handle_t *const ppu, ppu_init_param_t *const param)
 
   pxfifo_init_param_t pxfifo_init_params = (pxfifo_init_param_t){
       .bus_interface = param->bus_interface,
-      .lcd_handle = &ppu->lcd,
+      .lcd = &ppu->lcd,
   };
 
   ppu->interrupt = param->interrupt;
