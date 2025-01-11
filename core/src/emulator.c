@@ -9,6 +9,7 @@
 #include "oam.h"
 #include "io.h"
 #include "dma.h"
+#include "mbc.h"
 #include "joypad.h"
 #include "ppu.h"
 #include "timer.h"
@@ -70,7 +71,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
   status = ram_init(&emulator->ram);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = rom_init(&emulator->rom);
+  status = mbc_init(&emulator->mbc);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = timer_init(&emulator->tmr, &emulator->cpu_state.interrupt);
@@ -101,10 +102,10 @@ static inline status_code_t configure_data_bus(emulator_t *const emulator)
 {
   status_code_t status = STATUS_OK;
 
-  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_ROM_BANK_0, emulator->rom.bus_interface);
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_ROM_BANK_0, emulator->mbc.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_ROM_SWITCHABLE_BANK, emulator->rom.bus_interface);
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_ROM_SWITCHABLE_BANK, emulator->mbc.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_WRAM, emulator->ram.bus_interface);
@@ -113,7 +114,7 @@ static inline status_code_t configure_data_bus(emulator_t *const emulator)
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_VRAM, emulator->ram.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_EXT_RAM, emulator->rom.bus_interface);
+  status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_EXT_RAM, emulator->mbc.bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = data_bus_add_segment(&emulator->bus_handle, SEGMENT_TYPE_OAM, emulator->ppu.oam.bus_interface);
@@ -158,5 +159,5 @@ status_code_t emulator_cleanup(emulator_t *const emulator)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
 
-  return rom_unload(&emulator->rom);
+  return mbc_cleanup(&emulator->mbc);
 }
