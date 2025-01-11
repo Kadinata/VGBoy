@@ -151,6 +151,15 @@ uint16_t lcd_ctrl_window_tile_map_address(lcd_handle_t *const handle);
 uint8_t lcd_ctrl_obj_size(lcd_handle_t *const handle);
 
 /**
+ * Determine if the window enabled flag is on on the LCD control register
+ *
+ * @param handle Pointer to an LCD handle object
+ *
+ * @return 1 if the window enabled flag is on, 0 otherwise or if there's an error.
+ */
+uint8_t lcd_window_enabled(lcd_handle_t *const handle);
+
+/**
  * Determine if the window layer overlaps the screen and should be rendered
  *
  * @param handle Pointer to an LCD handle object

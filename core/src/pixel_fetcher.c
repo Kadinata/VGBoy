@@ -17,13 +17,17 @@
     VERIFY_PTR_RETURN_STATUS_IF_NULL(ctx->bus_interface, STATUS_ERR_INVALID_ARG); \
   }
 
-static status_code_t fetch_bg_tile_num(pixel_fetcher_context_t *const ctx);
-static status_code_t fetch_window_tile_num(pixel_fetcher_context_t *const ctx);
+static status_code_t fetch_bgw_tile_num(pixel_fetcher_context_t *const ctx);
 static status_code_t fetch_sprite_tile_num(pixel_fetcher_context_t *const ctx);
-static status_code_t fetch_bg_tile_data(pixel_fetcher_context_t *const ctx, uint8_t const offset);
+static status_code_t fetch_bgw_tile_data(pixel_fetcher_context_t *const ctx, uint8_t const offset);
 static status_code_t fetch_sprite_tile_data(pixel_fetcher_context_t *const ctx, uint8_t const offset);
+
 static inline bool window_is_in_view(lcd_handle_t *lcd_handle, pixel_fetcher_state_t *fetcher_state);
 static inline bool sprite_is_in_view(oam_entry_t *oam_entry, lcd_handle_t *lcd_handle, pixel_fetcher_state_t *fetcher_state);
+static inline uint16_t background_tile_num_address(pixel_fetcher_context_t *const ctx);
+static inline uint16_t window_tile_num_address(pixel_fetcher_context_t *const ctx);
+static inline uint16_t background_tile_data_address(pixel_fetcher_context_t *const ctx);
+static inline uint16_t window_tile_data_address(pixel_fetcher_context_t *const ctx);
 
 status_code_t pixel_fetcher_reset(pixel_fetcher_state_t *const state)
 {
@@ -42,10 +46,7 @@ status_code_t fetch_tile_number(pixel_fetcher_context_t *const ctx)
 
   if (ctx->lcd_handle->registers.lcd_ctrl & LCD_CTRL_BGW_EN)
   {
-    status = fetch_bg_tile_num(ctx);
-    RETURN_STATUS_IF_NOT_OK(status);
-
-    status = fetch_window_tile_num(ctx);
+    status = fetch_bgw_tile_num(ctx);
     RETURN_STATUS_IF_NOT_OK(status);
   }
 
@@ -63,7 +64,7 @@ status_code_t fetch_tile_data(pixel_fetcher_context_t *const ctx, uint8_t const 
 
   status_code_t status = STATUS_OK;
 
-  status = fetch_bg_tile_data(ctx, offset);
+  status = fetch_bgw_tile_data(ctx, offset);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = fetch_sprite_tile_data(ctx, offset);
@@ -102,15 +103,13 @@ uint8_t sprite_pixel_color_index(fetched_sprite_tile_t *const sprite_tile, uint8
   return (msb << 1) | lsb;
 }
 
-static status_code_t fetch_bg_tile_num(pixel_fetcher_context_t *const ctx)
+static status_code_t fetch_bgw_tile_num(pixel_fetcher_context_t *const ctx)
 {
   status_code_t status = STATUS_OK;
   lcd_handle_t *const lcd_handle = ctx->lcd_handle;
   pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
 
-  uint16_t address = lcd_ctrl_bg_tile_map_address(lcd_handle);
-  address += (fetcher_state->fetcher_x_index + (lcd_handle->registers.scroll_x / 8)) & 0x1F;
-  address += (((lcd_handle->registers.ly + lcd_handle->registers.scroll_y) & 0xFF) / 8) * 32;
+  uint16_t address = window_is_in_view(lcd_handle, fetcher_state) ? window_tile_num_address(ctx) : background_tile_num_address(ctx);
 
   status = bus_interface_read(ctx->bus_interface, address, &fetcher_state->bgw_tile_data.tile_num);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -123,31 +122,6 @@ static status_code_t fetch_bg_tile_num(pixel_fetcher_context_t *const ctx)
   return STATUS_OK;
 }
 
-static status_code_t fetch_window_tile_num(pixel_fetcher_context_t *const ctx)
-{
-  status_code_t status = STATUS_OK;
-  lcd_handle_t *const lcd_handle = ctx->lcd_handle;
-  pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
-
-  if (!lcd_window_visible(lcd_handle) || !window_is_in_view(lcd_handle, fetcher_state))
-  {
-    return STATUS_OK;
-  }
-
-  uint16_t address = lcd_ctrl_window_tile_map_address(lcd_handle);
-  address += ((fetcher_state->fetcher_x_index * 8) + 7 - lcd_handle->registers.window_x) / 8;
-  address += (fetcher_state->window_line / 8) * 32;
-
-  status = bus_interface_read(ctx->bus_interface, address, &fetcher_state->bgw_tile_data.tile_num);
-  RETURN_STATUS_IF_NOT_OK(status);
-
-  if (lcd_ctrl_bgw_tile_data_address(lcd_handle) == 0x8800)
-  {
-    fetcher_state->bgw_tile_data.tile_num += 0x80;
-  }
-
-  return STATUS_OK;
-}
 
 static status_code_t fetch_sprite_tile_num(pixel_fetcher_context_t *const ctx)
 {
@@ -175,7 +149,7 @@ static status_code_t fetch_sprite_tile_num(pixel_fetcher_context_t *const ctx)
   return STATUS_OK;
 }
 
-static status_code_t fetch_bg_tile_data(pixel_fetcher_context_t *const ctx, uint8_t const offset)
+static status_code_t fetch_bgw_tile_data(pixel_fetcher_context_t *const ctx, uint8_t const offset)
 {
   status_code_t status = STATUS_OK;
   lcd_handle_t *const lcd_handle = ctx->lcd_handle;
@@ -183,12 +157,9 @@ static status_code_t fetch_bg_tile_data(pixel_fetcher_context_t *const ctx, uint
 
   uint8_t *const target = !!offset ? &fetcher_state->bgw_tile_data.tile_data_high : &fetcher_state->bgw_tile_data.tile_data_low;
 
-  uint16_t address = lcd_ctrl_bgw_tile_data_address(lcd_handle);
-  address += fetcher_state->bgw_tile_data.tile_num * 16;
-  address += ((lcd_handle->registers.ly + lcd_handle->registers.scroll_y) % 8) * 2;
-  address += !!offset;
+  uint16_t address = window_is_in_view(lcd_handle, fetcher_state) ? window_tile_data_address(ctx) : background_tile_data_address(ctx);
 
-  status = bus_interface_read(ctx->bus_interface, address, target);
+  status = bus_interface_read(ctx->bus_interface, (address + !!offset), target);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;
@@ -232,14 +203,14 @@ static status_code_t fetch_sprite_tile_data(pixel_fetcher_context_t *const ctx, 
 
 static inline bool window_is_in_view(lcd_handle_t *lcd_handle, pixel_fetcher_state_t *fetcher_state)
 {
-  if (!lcd_handle || !fetcher_state)
+  if (!lcd_handle || !fetcher_state || !lcd_window_enabled(lcd_handle))
   {
     return false;
   }
 
   uint8_t wy = lcd_handle->registers.window_y;
-  uint8_t wx = lcd_handle->registers.window_x;
-  uint8_t line_x = (fetcher_state->fetcher_x_index * 8) + 7;
+  uint8_t wx = (lcd_handle->registers.window_x >= 7) ? (lcd_handle->registers.window_x - 7) : 0;
+  uint8_t line_x = (fetcher_state->fetcher_x_index * 8);
   uint8_t line_y = lcd_handle->registers.ly;
 
   return ((line_x >= wx) && (line_x < wx + SCREEN_WIDTH + 14) && (line_y >= wy) && (line_y < wy + SCREEN_HEIGHT));
@@ -256,4 +227,48 @@ static inline bool sprite_is_in_view(oam_entry_t *oam_entry, lcd_handle_t *lcd_h
   uint8_t sprite_x = (oam_entry->x_pos - 8) + (lcd_handle->registers.scroll_x % 8);
 
   return ((sprite_x >= line_x && sprite_x < line_x + 8) || ((sprite_x + 8) >= line_x && (sprite_x + 8) < line_x + 8));
+}
+
+static inline uint16_t background_tile_num_address(pixel_fetcher_context_t *const ctx)
+{
+  lcd_handle_t *const lcd_handle = ctx->lcd_handle;
+  pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
+
+  uint16_t offset = (fetcher_state->fetcher_x_index + (lcd_handle->registers.scroll_x / 8)) & 0x1F;
+  offset += (((lcd_handle->registers.ly + lcd_handle->registers.scroll_y) & 0xFF) / 8) * 32;
+
+  return lcd_ctrl_bg_tile_map_address(lcd_handle) + (offset & 0x3FF);
+}
+
+static inline uint16_t window_tile_num_address(pixel_fetcher_context_t *const ctx)
+{
+  lcd_handle_t *const lcd_handle = ctx->lcd_handle;
+  pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
+
+  uint16_t offset = (fetcher_state->fetcher_x_index - ((lcd_handle->registers.window_x - 7) / 8)) & 0x1F;
+  offset += (fetcher_state->window_line / 8) * 32;
+
+  return lcd_ctrl_window_tile_map_address(lcd_handle) + (offset & 0x3FF);
+}
+
+static inline uint16_t background_tile_data_address(pixel_fetcher_context_t *const ctx)
+{
+  lcd_handle_t *const lcd_handle = ctx->lcd_handle;
+  pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
+
+  uint16_t offset = ((lcd_handle->registers.ly + lcd_handle->registers.scroll_y) % 8) * 2;
+  offset += fetcher_state->bgw_tile_data.tile_num * 16;
+
+  return lcd_ctrl_bgw_tile_data_address(lcd_handle) + offset;
+}
+
+static inline uint16_t window_tile_data_address(pixel_fetcher_context_t *const ctx)
+{
+  lcd_handle_t *const lcd_handle = ctx->lcd_handle;
+  pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
+
+  uint16_t offset = (fetcher_state->window_line % 8) * 2;
+  offset += fetcher_state->bgw_tile_data.tile_num * 16;
+
+  return lcd_ctrl_bgw_tile_data_address(lcd_handle) + offset;
 }

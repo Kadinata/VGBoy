@@ -98,14 +98,15 @@ uint8_t lcd_ctrl_obj_size(lcd_handle_t *const handle)
   return (handle->registers.lcd_ctrl & LCD_CTRL_OBJ_SIZE) ? 16 : 8;
 }
 
+uint8_t lcd_window_enabled(lcd_handle_t *const handle)
+{
+  return (handle && (handle->registers.lcd_ctrl & LCD_CTRL_WINDOW_EN));
+}
+
 uint8_t lcd_window_visible(lcd_handle_t *const handle)
 {
-  if ((handle == NULL) || !(handle->registers.lcd_ctrl & LCD_CTRL_WINDOW_EN))
-  {
-    return 0;
-  }
-
-  return (handle->registers.window_x >= 0) && (handle->registers.window_x <= (SCREEN_WIDTH + 6)) &&
+  return lcd_window_enabled(handle) &&
+         (handle->registers.window_x >= 0) && (handle->registers.window_x <= (SCREEN_WIDTH + 6)) &&
          (handle->registers.window_y >= 0) && (handle->registers.window_y <= SCREEN_HEIGHT);
 }
 
