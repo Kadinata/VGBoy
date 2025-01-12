@@ -122,7 +122,6 @@ static status_code_t fetch_bgw_tile_num(pixel_fetcher_context_t *const ctx)
   return STATUS_OK;
 }
 
-
 static status_code_t fetch_sprite_tile_num(pixel_fetcher_context_t *const ctx)
 {
   lcd_handle_t *const lcd_handle = ctx->lcd_handle;
@@ -223,8 +222,8 @@ static inline bool sprite_is_in_view(oam_entry_t *oam_entry, lcd_handle_t *lcd_h
     return false;
   }
 
-  uint8_t line_x = fetcher_state->fetcher_x_index * 8;
-  uint8_t sprite_x = (oam_entry->x_pos - 8) + (lcd_handle->registers.scroll_x % 8);
+  int16_t line_x = fetcher_state->fetcher_x_index * 8;
+  int16_t sprite_x = (oam_entry->x_pos - 8) + (lcd_handle->registers.scroll_x % 8);
 
   return ((sprite_x >= line_x && sprite_x < line_x + 8) || ((sprite_x + 8) >= line_x && (sprite_x + 8) < line_x + 8));
 }
