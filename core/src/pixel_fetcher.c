@@ -244,7 +244,7 @@ static inline uint16_t window_tile_num_address(pixel_fetcher_context_t *const ct
   lcd_handle_t *const lcd_handle = ctx->lcd_handle;
   pixel_fetcher_state_t *const fetcher_state = ctx->fetcher_state;
 
-  uint16_t offset = (fetcher_state->fetcher_x_index - ((lcd_handle->registers.window_x - 7) / 8)) & 0x1F;
+  uint16_t offset = (((fetcher_state->fetcher_x_index * 8) - (lcd_handle->registers.window_x - 7)) / 8) & 0x1F;
   offset += (fetcher_state->window_line / 8) * 32;
 
   return lcd_ctrl_window_tile_map_address(lcd_handle) + (offset & 0x3FF);
