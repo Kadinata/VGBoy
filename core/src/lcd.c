@@ -21,6 +21,7 @@ status_code_t lcd_init(lcd_handle_t *const handle)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
 
   handle->registers.lcd_ctrl = 0x91;
+  handle->registers.lcd_stat = 0x02;
   handle->registers.scroll_x = 0x00;
   handle->registers.scroll_y = 0x00;
   handle->registers.bg_palette = 0xFC;
