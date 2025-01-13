@@ -27,9 +27,6 @@ status_code_t mbc_init(mbc_handle_t *const mbc)
 
   status_code_t status = STATUS_OK;
 
-  status = rom_init(&mbc->rom.content);
-  RETURN_STATUS_IF_NOT_OK(status);
-
   status = bus_interface_init(&mbc->bus_interface, mbc_read, mbc_write, mbc);
   RETURN_STATUS_IF_NOT_OK(status);
 

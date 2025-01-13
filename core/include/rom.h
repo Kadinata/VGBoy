@@ -71,11 +71,7 @@ typedef struct
 {
   rom_header_t *header;
   uint8_t *data;
-  bus_interface_t bus_interface;
 } rom_handle_t;
-
-/** */
-status_code_t rom_init(rom_handle_t *const handle);
 
 /**
  * Open a ROM file and load its contents to the provided ROM handle.

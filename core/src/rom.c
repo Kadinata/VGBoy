@@ -13,17 +13,7 @@
 #define ROM_HEADER_ADDR (0x100)
 #define ROM_SIZE_KB(rom_size) (32 * (1 << rom_size))
 
-static status_code_t rom_read(void *const resource, uint16_t const address, uint8_t *const data);
-static status_code_t rom_write(void *const resource, uint16_t const address, uint8_t const data);
-
 static status_code_t verify_header_checksum(rom_handle_t *const handle);
-
-status_code_t rom_init(rom_handle_t *const handle)
-{
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
-
-  return bus_interface_init(&handle->bus_interface, rom_read, rom_write, handle);
-}
 
 status_code_t rom_load(rom_handle_t *const handle, const char *file)
 {
@@ -106,32 +96,5 @@ static status_code_t verify_header_checksum(rom_handle_t *const handle)
   }
 
   Log_I("ROM header checksum check passed");
-  return STATUS_OK;
-}
-
-static status_code_t rom_read(void *const resource, uint16_t const address, uint8_t *const data)
-{
-  rom_handle_t *const handle = (rom_handle_t *)resource;
-
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_NOT_INITIALIZED);
-
-  *data = handle->data[address]; // TODO: do address verification
-  return STATUS_OK;
-}
-
-static status_code_t rom_write(void *const resource, uint16_t const address, uint8_t const data)
-{
-  rom_handle_t *const handle = (rom_handle_t *)resource;
-
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->header, STATUS_ERR_NOT_INITIALIZED);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_NOT_INITIALIZED);
-
-  // handle->data[address] = data; // TODO: do address verification
-
-  Log_I("ROM write: 0x%04X", address);
   return STATUS_OK;
 }
