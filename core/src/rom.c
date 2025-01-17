@@ -61,6 +61,8 @@ status_code_t rom_load(rom_handle_t *const handle, const char *file)
   Log_I("- License code: 0x%02X", handle->header->new_license_code);
   Log_I("- ROM version:  0x%02X", handle->header->mask_rom_version);
 
+  snprintf(handle->rom_file_name, sizeof(handle->rom_file_name), "%s", file);
+
   return verify_header_checksum(handle);
 }
 

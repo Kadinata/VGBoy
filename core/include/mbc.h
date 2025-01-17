@@ -2,6 +2,7 @@
 #define __DMG_MBC_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "bus_interface.h"
 #include "rom.h"
@@ -27,26 +28,33 @@ typedef enum
 
 typedef struct
 {
-  uint8_t active_bank_num;
   uint8_t *active_switchable_bank;
+  uint16_t active_bank_num;
   rom_handle_t content;
   bus_interface_t bus_interface;
 } mbc_rom_t;
 
 typedef struct
 {
-  uint8_t has_battery;
-  uint8_t enabled;
+  bool enabled;
   uint8_t num_banks;
   uint8_t *banks[16];
   uint8_t *active_bank;
+  uint8_t active_bank_num;
   bus_interface_t bus_interface;
 } mbc_ext_ram_t;
 
 typedef struct
 {
+  bool present;
+  bool has_unsaved_data;
+} mbc_battery_t;
+
+typedef struct
+{
   mbc_rom_t rom;
   mbc_ext_ram_t ext_ram;
+  mbc_battery_t batt;
   banking_mode_t banking_mode;
   bus_interface_t bus_interface;
 } mbc_handle_t;
@@ -54,5 +62,7 @@ typedef struct
 status_code_t mbc_init(mbc_handle_t *const mbc);
 status_code_t mbc_load_rom(mbc_handle_t *const mbc, const char *file);
 status_code_t mbc_cleanup(mbc_handle_t *const mbc);
+status_code_t mbc_save_game(mbc_handle_t *const mbc);
+status_code_t mbc_load_saved_game(mbc_handle_t *const mbc);
 
 #endif /* __DMG_MBC_H__ */

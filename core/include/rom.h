@@ -69,6 +69,7 @@ typedef struct
 /** */
 typedef struct
 {
+  char rom_file_name[512];
   rom_header_t *header;
   uint8_t *data;
 } rom_handle_t;
