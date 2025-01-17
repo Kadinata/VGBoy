@@ -2,6 +2,7 @@
 #define __DMG_EMULATOR_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "cpu.h"
 #include "data_bus.h"
@@ -27,6 +28,7 @@ typedef struct
   mbc_handle_t mbc;
   joypad_handle_t joypad;
   callback_t cycle_sync_callback;
+  bool running;
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);

@@ -145,6 +145,7 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->ppu.oam.bus_interface.offset = 0xFE00;
   emulator->io.bus_interface.offset = 0xFF00;
   emulator->cpu_state.interrupt.bus_interface.offset = 0xFF00;
+  emulator->running = true;
 
   status = module_init(emulator);
   RETURN_STATUS_IF_NOT_OK(status);
