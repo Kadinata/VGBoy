@@ -11,6 +11,12 @@
 #include "pixel_fifo.h"
 #include "status_code.h"
 
+typedef union
+{
+  uint32_t matrix[SCREEN_HEIGHT][SCREEN_WIDTH];
+  uint32_t buffer[SCREEN_HEIGHT * SCREEN_WIDTH];
+} video_buffer_t;
+
 typedef struct
 {
   lcd_handle_t lcd;
@@ -20,7 +26,7 @@ typedef struct
   callback_t fps_sync_callback;
   uint32_t current_frame;
   uint32_t line_ticks;
-  uint32_t video_buffer[SCREEN_HEIGHT * SCREEN_WIDTH];
+  video_buffer_t video_buffer;
 } ppu_handle_t;
 
 typedef struct

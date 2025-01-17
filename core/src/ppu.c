@@ -18,7 +18,6 @@
 #define LINES_PER_FRAME (154)
 #define TICKS_PER_LINE (456)
 
-static inline void load_video_buffer(ppu_handle_t *const ppu, pixel_data_t *const pixel_data);
 static inline status_code_t fps_sync(ppu_handle_t *const ppu);
 static status_code_t lcd_set_mode(ppu_handle_t *const ppu, lcd_mode_t mode);
 static status_code_t lyc_interrupt_check(ppu_handle_t *const ppu);
@@ -48,7 +47,7 @@ status_code_t ppu_init(ppu_handle_t *const ppu, ppu_init_param_t *const param)
   ppu->interrupt = param->interrupt;
   ppu->current_frame = 0;
   ppu->line_ticks = 0;
-  memset(ppu->video_buffer, 0, SCREEN_HEIGHT * SCREEN_WIDTH * sizeof(uint32_t));
+  memset(ppu->video_buffer.buffer, 0, sizeof(ppu->video_buffer.buffer));
 
   status = oam_init(&ppu->oam);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -133,7 +132,10 @@ static status_code_t handle_mode_xfer(ppu_handle_t *const ppu)
   status = pxfifo_shift_pixel(&ppu->pxfifo, &pixel_out);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  load_video_buffer(ppu, &pixel_out);
+  if (pixel_out.data_valid)
+  {
+    ppu->video_buffer.matrix[pixel_out.screen_y][pixel_out.screen_x] = pixel_out.color.as_hex;
+  }
 
   if (pixel_out.screen_x < (SCREEN_WIDTH - 1))
   {
@@ -238,16 +240,6 @@ static status_code_t lcd_set_mode(ppu_handle_t *const ppu, lcd_mode_t mode)
   }
 
   return STATUS_OK;
-}
-
-static inline void load_video_buffer(ppu_handle_t *const ppu, pixel_data_t *const pixel_data)
-{
-  uint16_t index = (pixel_data->screen_x + (pixel_data->screen_y * SCREEN_WIDTH));
-
-  if (pixel_data->data_valid && index <= (SCREEN_WIDTH * SCREEN_HEIGHT))
-  {
-    ppu->video_buffer[index] = pixel_data->color.as_hex;
-  }
 }
 
 static inline status_code_t fps_sync(ppu_handle_t *const ppu)
