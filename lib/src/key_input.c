@@ -21,8 +21,8 @@ static uint8_t const scancode_key_mapping[] = {
     [SDL_SCANCODE_A] = KEY_LEFT,
     [SDL_SCANCODE_S] = KEY_DOWN,
     [SDL_SCANCODE_D] = KEY_RIGHT,
-    [SDL_SCANCODE_K] = KEY_A,
-    [SDL_SCANCODE_L] = KEY_B,
+    [SDL_SCANCODE_K] = KEY_B,
+    [SDL_SCANCODE_L] = KEY_A,
     [SDL_SCANCODE_RETURN] = KEY_START,
     [SDL_SCANCODE_BACKSPACE] = KEY_SELECT,
 };
