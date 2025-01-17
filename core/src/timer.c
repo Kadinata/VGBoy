@@ -58,6 +58,7 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
     {
       tmr_handle->tima = tmr_handle->tma;
       status = request_interrupt(tmr_handle->int_handle, INT_TIMER);
+      RETURN_STATUS_IF_NOT_OK(status);
     }
   }
 
