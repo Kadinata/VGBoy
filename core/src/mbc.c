@@ -16,15 +16,15 @@ static status_code_t mbc_read(void *const resource, uint16_t address, uint8_t *c
 static status_code_t mbc_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_ext_ram_read(void *const resource, uint16_t address, uint8_t *const data);
 static status_code_t mbc_ext_ram_write(void *const resource, uint16_t address, uint8_t const data);
-static status_code_t mbc_no_banking_read(void *const resource, uint16_t address, uint8_t *const data);
-static status_code_t mbc_no_banking_write(void *const resource, uint16_t address, uint8_t const data);
-static status_code_t mbc_banked_rom_read(void *const resource, uint16_t address, uint8_t *const data);
+static status_code_t mbc_rom_read(void *const resource, uint16_t address, uint8_t *const data);
+static status_code_t mbc_no_rom_banking_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_2_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t const data);
 
 static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num);
+static inline status_code_t mbc_switch_rom_bank(mbc_handle_t *const mbc, uint8_t rom_bank_num);
 
 status_code_t mbc_init(mbc_handle_t *const mbc)
 {
@@ -54,28 +54,34 @@ status_code_t mbc_load_rom(mbc_handle_t *const mbc, const char *file)
   status = mbc_init_battery(mbc);
   RETURN_STATUS_IF_NOT_OK(status);
 
+  mbc->rom.num_banks = (2 << (mbc->rom.content.header->rom_size & 0x0F));
+  if (((mbc->rom.content.header->rom_size >> 4) & 0xF) == 5)
+  {
+    mbc->rom.num_banks += 64;
+  }
+
   switch (mbc->rom.content.header->cartridge_type)
   {
   case ROM_ONLY:
   case ROM_RAM:
   case ROM_RAM_BATT:
-    status = bus_interface_init(&mbc->rom.bus_interface, mbc_no_banking_read, mbc_no_banking_write, mbc);
+    status = bus_interface_init(&mbc->rom.bus_interface, mbc_rom_read, mbc_no_rom_banking_write, mbc);
     break;
   case ROM_MBC1:
   case ROM_MBC1_RAM:
   case ROM_MBC1_RAM_BATT:
-    status = bus_interface_init(&mbc->rom.bus_interface, mbc_banked_rom_read, mbc_1_write, mbc);
+    status = bus_interface_init(&mbc->rom.bus_interface, mbc_rom_read, mbc_1_write, mbc);
     break;
   case ROM_MBC2:
   case ROM_MBC2_BATT:
-    status = bus_interface_init(&mbc->rom.bus_interface, mbc_banked_rom_read, mbc_2_write, mbc);
+    status = bus_interface_init(&mbc->rom.bus_interface, mbc_rom_read, mbc_2_write, mbc);
     break;
   case ROM_MBC3:
   case ROM_MBC3_RAM:
   case ROM_MBC3_RAM_BATT:
   case ROM_MBC3_TIMER_BATT:
   case ROM_MBC3_TIMER_RAM_BATT:
-    status = bus_interface_init(&mbc->rom.bus_interface, mbc_banked_rom_read, mbc_3_write, mbc);
+    status = bus_interface_init(&mbc->rom.bus_interface, mbc_rom_read, mbc_3_write, mbc);
     break;
   case ROM_MBC5:
   case ROM_MBC5_RAM:
@@ -83,13 +89,16 @@ status_code_t mbc_load_rom(mbc_handle_t *const mbc, const char *file)
   case ROM_MBC5_RUMBLE:
   case ROM_MBC5_RUMBLE_RAM:
   case ROM_MBC5_RUMBLE_RAM_BATT:
-    status = bus_interface_init(&mbc->rom.bus_interface, mbc_banked_rom_read, mbc_5_write, mbc);
+    status = bus_interface_init(&mbc->rom.bus_interface, mbc_rom_read, mbc_5_write, mbc);
     break;
   default:
     Log_E("Unsupported cartridge type: 0x%02X", mbc->rom.content.header->cartridge_type);
     return STATUS_ERR_UNSUPPORTED;
     break;
   }
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = mbc_switch_rom_bank(mbc, 1);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = mbc_load_saved_game(mbc);
@@ -185,7 +194,7 @@ static status_code_t mbc_init_battery(mbc_handle_t *const mbc)
 
 static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num)
 {
-  VERIFY_COND_RETURN_STATUS_IF_TRUE(ram_bank_num >= 16, STATUS_ERR_INVALID_ARG);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(ram_bank_num >= mbc->ext_ram.num_banks, STATUS_ERR_INVALID_ARG);
 
   status_code_t status = STATUS_OK;
 
@@ -194,6 +203,16 @@ static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uin
 
   mbc->ext_ram.active_bank_num = ram_bank_num;
   mbc->ext_ram.active_bank = mbc->ext_ram.banks[ram_bank_num];
+
+  return STATUS_OK;
+}
+
+static inline status_code_t mbc_switch_rom_bank(mbc_handle_t *const mbc, uint8_t rom_bank_num)
+{
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(rom_bank_num >= mbc->rom.num_banks, STATUS_ERR_INVALID_ARG);
+
+  mbc->rom.active_bank_num = rom_bank_num;
+  mbc->rom.active_switchable_bank = &(mbc->rom.content.data[0x4000 * mbc->rom.active_bank_num]);
 
   return STATUS_OK;
 }
@@ -251,6 +270,7 @@ status_code_t mbc_save_game(mbc_handle_t *const mbc)
   fwrite(mbc->ext_ram.active_bank, 1, 0x2000, fp);
   fclose(fp);
 
+  Log_I("Game state saved");
   return STATUS_OK;
 }
 
@@ -290,22 +310,7 @@ static status_code_t mbc_write(void *const resource, uint16_t address, uint8_t c
   return STATUS_OK;
 }
 
-static status_code_t mbc_no_banking_read(void *const resource, uint16_t address, uint8_t *const data)
-{
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
-
-  mbc_handle_t *const mbc = (mbc_handle_t *)resource;
-
-  *data = mbc->rom.content.data[address];
-  return STATUS_OK;
-}
-
-static status_code_t mbc_no_banking_write(void *const __attribute__((unused)) resource, uint16_t __attribute__((unused)) address, uint8_t const __attribute__((unused)) data)
-{
-  return STATUS_OK;
-}
-
-static status_code_t mbc_banked_rom_read(void *const resource, uint16_t address, uint8_t *const data)
+static status_code_t mbc_rom_read(void *const resource, uint16_t address, uint8_t *const data)
 {
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
 
@@ -323,6 +328,11 @@ static status_code_t mbc_banked_rom_read(void *const resource, uint16_t address,
   return STATUS_OK;
 }
 
+static status_code_t mbc_no_rom_banking_write(void *const __attribute__((unused)) resource, uint16_t __attribute__((unused)) address, uint8_t const __attribute__((unused)) data)
+{
+  return STATUS_OK;
+}
+
 static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t const data)
 {
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
@@ -336,9 +346,9 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
   else if ((address >= 0x2000) && (address < 0x4000))
   {
     /** 0x2000 - 0x3FFF: ROM bank number (Write only) */
-    mbc->rom.active_bank_num = data ? data : 1;
-    mbc->rom.active_bank_num &= 0x1F;
-    mbc->rom.active_switchable_bank = &(mbc->rom.content.data[0x4000 * mbc->rom.active_bank_num]);
+    uint16_t rom_bank = (mbc->rom.active_bank_num & ~(0x1F)) | ((data ? data : 1) & 0x1F);
+    status = mbc_switch_rom_bank(mbc, rom_bank);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
   else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
   {
@@ -348,10 +358,11 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
       status = mbc_switch_ext_ram_bank(mbc, data & 0x3);
       RETURN_STATUS_IF_NOT_OK(status);
     }
-    else if (mbc->rom.content.header->rom_size > 0x4)
+    else if (mbc->rom.num_banks > 32)
     {
-      // mbc
-      /** TODO: Implement */
+      uint16_t rom_bank = (mbc->rom.active_bank_num & ~(0x3 << 5)) | ((data & 0x3) << 5);
+      status = mbc_switch_rom_bank(mbc, rom_bank);
+      RETURN_STATUS_IF_NOT_OK(status);
     }
   }
   else if ((address >= 0x6000) && (address < 0x8000))
@@ -365,6 +376,8 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
         status = mbc_switch_ext_ram_bank(mbc, data & 0x3);
         RETURN_STATUS_IF_NOT_OK(status);
       }
+
+      // TODO: Handle ROM Bank 0 switching
     }
   }
 
@@ -374,15 +387,16 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
 static status_code_t mbc_2_write(void *const resource, uint16_t address, uint8_t const data)
 {
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
+  status_code_t status = STATUS_OK;
 
   if (address < 0x4000)
   {
     /** 0x0000 - 0x3FFF: RAM Enable, ROM Bank Number (Write only) */
     if (address & 0x0100)
     {
-      mbc->rom.active_bank_num = data ? data : 1;
-      mbc->rom.active_bank_num &= 0x0F;
-      mbc->rom.active_switchable_bank = &(mbc->rom.content.data[0x4000 * mbc->rom.active_bank_num]);
+      uint16_t rom_bank_num = (data ? data : 1) & 0x0F;
+      status = mbc_switch_rom_bank(mbc, rom_bank_num);
+      RETURN_STATUS_IF_NOT_OK(status);
     }
     else
     {
@@ -407,9 +421,9 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
   else if ((address >= 0x2000) && (address < 0x4000))
   {
     /** 0x2000 - 0x3FFF: ROM bank number (Write only) */
-    mbc->rom.active_bank_num = data ? data : 1;
-    mbc->rom.active_bank_num &= 0x7F;
-    mbc->rom.active_switchable_bank = &(mbc->rom.content.data[0x4000 * mbc->rom.active_bank_num]);
+    uint16_t rom_bank_num = (data ? data : 1) & 0x7F;
+    status = mbc_switch_rom_bank(mbc, rom_bank_num);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
   else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
   {
@@ -460,16 +474,16 @@ static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t
   else if ((address >= 0x2000) && (address < 0x3000))
   {
     /** 0x2000 - 0x2FFF: ROM bank number LSB (Write only) */
-    mbc->rom.active_bank_num = (mbc->rom.active_bank_num & ~(0x00FF)) | (data & 0xFF);
-    mbc->rom.active_bank_num &= 0x1FF;
-    mbc->rom.active_switchable_bank = &(mbc->rom.content.data[0x4000 * mbc->rom.active_bank_num]);
+    uint16_t rom_bank_num = (mbc->rom.active_bank_num & ~(0x00FF)) | (data & 0xFF);
+    status = mbc_switch_rom_bank(mbc, (rom_bank_num & 0x1FF));
+    RETURN_STATUS_IF_NOT_OK(status);
   }
   else if ((address >= 0x3000) && (address < 0x4000))
   {
     /** 0x3000 - 0x3FFF: ROM bank number 9th bit (Write only) */
-    mbc->rom.active_bank_num = (mbc->rom.active_bank_num & ~(0x100)) | ((data & 0x1) << 8);
-    mbc->rom.active_bank_num &= 0x1FF;
-    mbc->rom.active_switchable_bank = &(mbc->rom.content.data[0x4000 * mbc->rom.active_bank_num]);
+    uint16_t rom_bank_num = (mbc->rom.active_bank_num & ~(0x100)) | ((data & 0x1) << 8);
+    status = mbc_switch_rom_bank(mbc, (rom_bank_num & 0x1FF));
+    RETURN_STATUS_IF_NOT_OK(status);
   }
   else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
   {

@@ -28,6 +28,7 @@ typedef enum
 
 typedef struct
 {
+  uint16_t num_banks;
   uint8_t *active_switchable_bank;
   uint16_t active_bank_num;
   rom_handle_t content;
