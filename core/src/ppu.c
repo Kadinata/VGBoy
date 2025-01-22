@@ -102,7 +102,7 @@ static status_code_t handle_mode_oam_scan(ppu_handle_t *const ppu)
 {
   status_code_t status = STATUS_OK;
 
-  if (ppu->line_ticks >= 80)
+  if (ppu->line_ticks >= OAM_SCAN_DURATION_TICKS)
   {
     status = lcd_set_mode(ppu, MODE_XFER);
     RETURN_STATUS_IF_NOT_OK(status);
