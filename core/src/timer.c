@@ -8,20 +8,20 @@
 static status_code_t timer_read(void *const resource, uint16_t const address, uint8_t *const data);
 static status_code_t timer_write(void *const resource, uint16_t const address, uint8_t const data);
 
-status_code_t timer_init(timer_handle_t *const tmr_handle, interrupt_handle_t *const int_handle)
+status_code_t timer_init(timer_handle_t *const timer, interrupt_handle_t *const interrupt)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(int_handle);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(timer);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(interrupt);
 
-  tmr_handle->div = 0xABCC;
-  tmr_handle->int_handle = int_handle;
+  timer->registers.div = 0xABCC;
+  timer->interrupt = interrupt;
 
-  return bus_interface_init(&tmr_handle->bus_interface, timer_read, timer_write, tmr_handle);
+  return bus_interface_init(&timer->bus_interface, timer_read, timer_write, timer);
 }
 
-status_code_t timer_tick(timer_handle_t *const tmr_handle)
+status_code_t timer_tick(timer_handle_t *const timer)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(tmr_handle);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(timer);
 
   status_code_t status = STATUS_OK;
   uint8_t timer_update = 0;
@@ -30,9 +30,9 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
    * Always increment timer DIV at every T-cycle tick
    * and determine which bits flipped from 1 to 0.
    */
-  uint16_t bit_changes = (tmr_handle->div++) & (~tmr_handle->div);
+  uint16_t bit_changes = (timer->registers.div++) & (~timer->registers.div);
 
-  switch ((tmr_handle->tac & 0x3)) // TODO: use constant
+  switch ((timer->registers.tac & 0x3)) // TODO: use constant
   {
   case 0: // TODO: use enum
     timer_update = (bit_changes & (1 << 9)) ? 1 : 0;
@@ -50,14 +50,14 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
     break;
   }
 
-  if (timer_update && (tmr_handle->tac & 0x4)) // TODO: use constant
+  if (timer_update && (timer->registers.tac & 0x4)) // TODO: use constant
   {
-    tmr_handle->tima++;
+    timer->registers.tima++;
 
-    if (tmr_handle->tima == 0xFF)
+    if (timer->registers.tima == 0xFF)
     {
-      tmr_handle->tima = tmr_handle->tma;
-      status = request_interrupt(tmr_handle->int_handle, INT_TIMER);
+      timer->registers.tima = timer->registers.tma;
+      status = request_interrupt(timer->interrupt, INT_TIMER);
       RETURN_STATUS_IF_NOT_OK(status);
     }
   }
@@ -68,21 +68,21 @@ status_code_t timer_tick(timer_handle_t *const tmr_handle)
 static status_code_t timer_read(void *const resource, uint16_t const address, uint8_t *const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
-  timer_handle_t *tmr_handle = (timer_handle_t *)resource;
+  timer_handle_t *timer = (timer_handle_t *)resource;
 
   switch (address)
   {
   case 0: // TODO: use enum
-    *data = (tmr_handle->div >> 8);
+    *data = (timer->registers.div >> 8);
     break;
   case 1:
-    *data = tmr_handle->tima;
+    *data = timer->registers.tima;
     break;
   case 2:
-    *data = tmr_handle->tma;
+    *data = timer->registers.tma;
     break;
   case 3:
-    *data = tmr_handle->tac;
+    *data = timer->registers.tac;
     break;
   default:
     break;
@@ -94,21 +94,21 @@ static status_code_t timer_read(void *const resource, uint16_t const address, ui
 static status_code_t timer_write(void *const resource, uint16_t const address, uint8_t const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
-  timer_handle_t *tmr_handle = (timer_handle_t *)resource;
+  timer_handle_t *timer = (timer_handle_t *)resource;
 
   switch (address)
   {
   case 0: // TODO: use enum
-    tmr_handle->div = 0;
+    timer->registers.div = 0;
     break;
   case 1:
-    tmr_handle->tima = data;
+    timer->registers.tima = data;
     break;
   case 2:
-    tmr_handle->tma = data;
+    timer->registers.tma = data;
     break;
   case 3:
-    tmr_handle->tac = data;
+    timer->registers.tac = data;
     break;
   default:
     break;
