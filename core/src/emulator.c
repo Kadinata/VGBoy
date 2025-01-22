@@ -12,6 +12,7 @@
 #include "mbc.h"
 #include "joypad.h"
 #include "ppu.h"
+#include "apu.h"
 #include "timer.h"
 #include "logging.h"
 #include "bus_interface.h"
@@ -58,6 +59,7 @@ static inline status_code_t module_init(emulator_t *const emulator)
       .lcd_bus_interface = &emulator->ppu.lcd.bus_interface,
       .timer_bus_interface = &emulator->tmr.bus_interface,
       .joypad_bus_interface = &emulator->joypad.bus_interface,
+      .apu_bus_interface = &emulator->apu.bus_interface,
   };
 
   ppu_init_param_t ppu_init_params = {
@@ -87,6 +89,9 @@ static inline status_code_t module_init(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = ppu_init(&emulator->ppu, &ppu_init_params);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = apu_init(&emulator->apu);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = cpu_init(&emulator->cpu_state, &cpu_init_params);

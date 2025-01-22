@@ -12,6 +12,7 @@
 #include "mbc.h"
 #include "joypad.h"
 #include "ppu.h"
+#include "apu.h"
 #include "timer.h"
 #include "status_code.h"
 #include "callback.h"
@@ -25,6 +26,7 @@ typedef struct
   timer_handle_t tmr;
   dma_handle_t dma;
   ppu_handle_t ppu;
+  apu_handle_t apu;
   mbc_handle_t mbc;
   joypad_handle_t joypad;
   callback_t cycle_sync_callback;
