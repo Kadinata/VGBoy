@@ -5,7 +5,7 @@
 
 #include "status_code.h"
 
-status_code_t main_window_init(uint32_t *const video_buffer);
+status_code_t main_window_init(uint32_t *const video_buffer, uint16_t window_width, uint16_t window_height);
 void main_window_update(void);
 void main_window_cleanup(void);
 

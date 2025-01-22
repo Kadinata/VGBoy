@@ -40,7 +40,7 @@ status_code_t display_init(bus_interface_t const data_bus_interface, ppu_handle_
   status = tile_debug_window_init(data_bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = main_window_init(ppu_handle->video_buffer.buffer);
+  status = main_window_init(ppu_handle->video_buffer.buffer, SCREEN_WIDTH, SCREEN_HEIGHT);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = callback_init(&fps_sync_callback, handle_fps_sync, (void *)&fps_sync_handle);

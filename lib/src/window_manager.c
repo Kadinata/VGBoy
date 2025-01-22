@@ -65,7 +65,9 @@ status_code_t window_destroy(window_handle_t *const handle)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->window, STATUS_ERR_ALREADY_FREED);
   VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->renderer, STATUS_ERR_ALREADY_FREED);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->texture, STATUS_ERR_ALREADY_FREED);
 
+  SDL_DestroyTexture(handle->texture);
   SDL_DestroyRenderer(handle->renderer);
   SDL_DestroyWindow(handle->window);
 
