@@ -4,6 +4,7 @@
 #include "cpu.h"
 #include "logging.h"
 #include "emulator.h"
+#include "audio.h"
 #include "display.h"
 #include "key_input.h"
 
@@ -33,6 +34,13 @@ void *cpu_run(void *p)
   return 0;
 }
 
+void cleanup(emulator_t *const emulator)
+{
+  display_cleanup();
+  audio_cleanup();
+  emulator_cleanup(emulator);
+}
+
 int main(int __attribute__((unused)) argc, char **argv)
 {
   status_code_t status;
@@ -51,18 +59,27 @@ int main(int __attribute__((unused)) argc, char **argv)
     return -status;
   }
 
-  status = key_input_init(&emulator.joypad.key_update_callback);
-  if (status != STATUS_OK)
-  {
-    Log_E("Failed to init key input: %d", status);
-    return -status;
-  }
-
   status = display_init(emulator.bus_handle.bus_interface, &emulator.ppu);
   if (status != STATUS_OK)
   {
     Log_E("Failed to init display: %d", status);
-    display_cleanup();
+    cleanup(&emulator);
+    return -status;
+  }
+
+  status = audio_init(&emulator.apu.playback_cb);
+  if (status != STATUS_OK)
+  {
+    Log_E("Failed to init audio device: %d", status);
+    cleanup(&emulator);
+    return -status;
+  }
+
+  status = key_input_init(&emulator.joypad.key_update_callback);
+  if (status != STATUS_OK)
+  {
+    Log_E("Failed to init key input: %d", status);
+    cleanup(&emulator);
     return -status;
   }
 
@@ -76,7 +93,7 @@ int main(int __attribute__((unused)) argc, char **argv)
   while (1)
   {
     usleep(1000);
-    status = key_input_read();    
+    status = key_input_read();
 
     if (status == STATUS_REQ_EXIT)
     {
@@ -89,7 +106,7 @@ int main(int __attribute__((unused)) argc, char **argv)
   emulator.running = false;
   pthread_join(t1, NULL);
 
-  emulator_cleanup(&emulator);
+  cleanup(&emulator);
 
   Log_I("Exiting: %d", status);
   return -status;
