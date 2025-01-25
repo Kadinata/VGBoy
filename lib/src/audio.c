@@ -8,6 +8,8 @@
 #include "logging.h"
 #include "status_code.h"
 
+#define SAMPLE_RATE (44000)
+
 typedef struct
 {
   SDL_AudioDeviceID audio_device;
@@ -16,11 +18,13 @@ typedef struct
 
 static audio_handle_t audio_handle;
 
-static void audio_callback(void __attribute__((unused)) *userdata, uint8_t *audio_buffer, int len)
+static void audio_callback(void __attribute__((unused)) *userdata, uint8_t *stream_buffer, int length)
 {
   const audio_playback_samples_t playback_samples = {
-      .data = audio_buffer,
-      .length = len,
+      .data = stream_buffer,
+      .length = length,
+      .sample_rate_hz = SAMPLE_RATE,
+      .volume_adjust = 0.5f,
   };
 
   if (audio_handle.playback_cb)
@@ -41,7 +45,7 @@ status_code_t audio_init(callback_t *const playback_cb)
   }
 
   SDL_AudioSpec desired_spec = (SDL_AudioSpec){
-      .freq = 44000,
+      .freq = SAMPLE_RATE,
       .format = AUDIO_S16LSB,
       .channels = 2,
       .samples = 512,

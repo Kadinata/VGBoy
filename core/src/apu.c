@@ -12,7 +12,7 @@
 #include "logging.h"
 #include "status_code.h"
 
-#define CYCLES_PER_SAMPLE (1048576 / 44000)
+#define CPU_FREQ (1048576)
 #define DEFAULT_VOLUME (INT16_MAX)
 
 static status_code_t apu_bus_read(void *const resource, uint16_t const address, uint8_t *const data);
@@ -114,9 +114,6 @@ static status_code_t apu_sample(apu_handle_t *const apu, float *const left_sampl
   *left_sample /= 4.0f;
   *right_sample /= 4.0f;
 
-  *left_sample -= 7.5f;
-  *right_sample -= 7.5f;
-
   *left_sample *= (left_volume / 8.0f);
   *right_sample *= (right_volume / 8.0f);
 
@@ -139,9 +136,11 @@ static status_code_t apu_playback(void *const ctx, const void *arg)
 
   memset(playback_samples->data, 0, playback_samples->length);
 
+  const uint32_t ticks_per_sample = CPU_FREQ / playback_samples->sample_rate_hz;
+
   for (uint32_t i = 0; i < buffer_len; i += 2)
   {
-    for (uint32_t j = 0; j < CYCLES_PER_SAMPLE; j++)
+    for (uint32_t j = 0; j < ticks_per_sample; j++)
     {
       apu_tick(apu);
     }
@@ -150,11 +149,11 @@ static status_code_t apu_playback(void *const ctx, const void *arg)
     {
       apu_sample(apu, &left_sample, &right_sample);
 
-      left_sample *= DEFAULT_VOLUME;
-      right_sample *= DEFAULT_VOLUME;
+      left_sample *= playback_samples->volume_adjust * DEFAULT_VOLUME;
+      right_sample *= playback_samples->volume_adjust * DEFAULT_VOLUME;
 
-      stream_buf[i] = (int16_t)(left_sample / 7.5);
-      stream_buf[i + 1] = (int16_t)(right_sample / 7.5);
+      stream_buf[i] = (int16_t)(left_sample);
+      stream_buf[i + 1] = (int16_t)(right_sample);
     }
   }
 
