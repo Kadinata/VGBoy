@@ -7,7 +7,6 @@
 #include "cpu.h"
 #include "mock_bus_interface.h"
 #include "mock_interrupt.h"
-#include "mock_timing_sync.h"
 
 static interrupt_handle_t interrrupt_handle;
 
@@ -16,7 +15,6 @@ void stub_cpu_state_init(cpu_state_t *state)
   state->registers.pc = TEST_PC_INIT_VALUE;
   state->m_cycles = 0;
   state->run_mode = RUN_MODE_NORMAL;
-  state->int_handle = &interrrupt_handle;
 };
 
 void stub_mem_read_8(uint16_t addr, uint8_t *data)

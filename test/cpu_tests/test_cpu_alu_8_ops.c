@@ -3,8 +3,8 @@
 #include "status_code.h"
 
 #include "mock_bus_interface.h"
+#include "mock_callback.h"
 #include "mock_interrupt.h"
-#include "mock_timing_sync.h"
 #include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
 

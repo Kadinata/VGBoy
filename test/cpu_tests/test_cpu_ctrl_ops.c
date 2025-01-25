@@ -3,8 +3,8 @@
 #include "status_code.h"
 
 #include "mock_bus_interface.h"
+#include "mock_callback.h"
 #include "mock_interrupt.h"
-#include "mock_timing_sync.h"
 #include "mock_debug_serial.h"
 #include "cpu_test_helper.h"
 
@@ -36,7 +36,6 @@ void test_NOP(void)
   TEST_ASSERT_EQUAL_HEX16(TEST_PC_INIT_VALUE + 1, state.registers.pc);
   TEST_ASSERT_EQUAL_INT(1, state.m_cycles);
 }
-
 
 /**
  * 0x10: NOP

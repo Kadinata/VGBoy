@@ -7,7 +7,6 @@
 
 #include "mock_bus_interface.h"
 #include "mock_interrupt.h"
-#include "mock_timing_sync.h"
 
 #define TEST_PC_INIT_VALUE (0x100)
 
