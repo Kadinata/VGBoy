@@ -15,6 +15,5 @@ typedef struct
 
 status_code_t stub_bus_read(void *const resource, uint16_t const address, uint8_t *const data);
 status_code_t stub_bus_write(void *const resource, uint16_t const address, uint8_t const data);
-void stub_init_bus_interface(bus_interface_t *bus_interface, test_bus_data_ctx_t *ctx);
 
 #endif /* __BUS_INTERFACE_TEST_HELPER_H__ */

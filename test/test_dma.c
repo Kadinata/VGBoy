@@ -7,6 +7,18 @@
 
 TEST_FILE("dma.c")
 
+void stub_init_bus_interface(bus_interface_t *bus_interface, test_bus_data_ctx_t *ctx)
+{
+  bus_interface->read = stub_bus_read;
+  bus_interface->write = stub_bus_write;
+  bus_interface->resource = ctx;
+
+  if (ctx)
+  {
+    ctx->return_status = STATUS_OK;
+  }
+}
+
 void setUp(void)
 {
 }
