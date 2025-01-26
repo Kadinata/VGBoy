@@ -106,6 +106,7 @@ static inline bool length_timer_enabled(apu_wave_handle_t *const apu_wave)
 
 static inline void trigger_channel(apu_wave_handle_t *const apu_wave)
 {
+  apu_wave->state.enabled = !!(apu_wave->registers.dacen & APU_WAVE_DAC_EN);
   apu_wave->state.length_timer = apu_wave->state.length_timer ? apu_wave->state.length_timer : 256;
   apu_wave->state.sample_index = 0;
 }
@@ -121,7 +122,7 @@ static status_code_t apu_wave_read(void *const resource, uint16_t const address,
   switch (address)
   {
   case 0x0000:
-    *data = (apu_wave->state.enabled ? APU_WAVE_DAC_EN : 0);
+    *data = apu_wave->registers.dacen;
     break;
   case 0x0001:
     *data = 0xFF; /* NR31 is write only */
@@ -153,7 +154,8 @@ static status_code_t apu_wave_write(void *const resource, uint16_t const address
   switch (address)
   {
   case 0x0000:
-    apu_wave->state.enabled = !!(data & APU_WAVE_DAC_EN);
+    apu_wave->registers.dacen = (data & APU_WAVE_DAC_EN);
+    apu_wave->state.enabled = (apu_wave->state.enabled && !!(data & APU_WAVE_DAC_EN));
     break;
   case 0x0001:
     apu_wave->registers.ltmr = data;

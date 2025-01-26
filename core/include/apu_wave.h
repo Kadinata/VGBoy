@@ -24,7 +24,7 @@ typedef enum
 
 typedef struct __attribute__((packed))
 {
-  // uint8_t dacen; /* 0xFF1A — NR30: Channel 3 DAC enable */
+  uint8_t dacen; /* 0xFF1A — NR30: Channel 3 DAC enable */
   uint8_t ltmr;  /* 0xFF1B — NR31: Channel 3 length timer [write-only] */
   uint8_t vol;   /* 0xFF1C — NR32: Channel 3 output level */
   uint8_t plow;  /* 0xFF1D — NR33: Channel 3 period low [write-only] */

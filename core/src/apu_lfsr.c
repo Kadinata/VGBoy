@@ -188,7 +188,7 @@ static status_code_t apu_lfsr_write(void *const resource, uint16_t const address
     break;
   case 0x0002: /* NR42 */
     apu_lfsr->registers.volenv = data;
-    apu_lfsr->state.enabled = !!(data & APU_CHANNEL_ENABLED);
+    apu_lfsr->state.enabled = (apu_lfsr->state.enabled && !!(data & APU_CHANNEL_ENABLED));
     break;
   case 0x0003: /* NR43 */
     apu_lfsr->registers.frqrand = data;

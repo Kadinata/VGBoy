@@ -297,7 +297,7 @@ static status_code_t apu_pwm_write(void *const resource, uint16_t const address,
     break;
   case 0x0002:
     apu_pwm->registers.volenv = data;
-    apu_pwm->state.enabled = !!(data & APU_CHANNEL_ENABLED);
+    apu_pwm->state.enabled = (apu_pwm->state.enabled && !!(data & APU_CHANNEL_ENABLED));
     break;
   case 0x0003:
     apu_pwm->registers.plow = data;
