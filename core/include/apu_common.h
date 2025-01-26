@@ -4,7 +4,7 @@
 typedef enum
 {
   /** NRx1 masks */
-  APU_LENGTH_TIMER = 0x1F,
+  APU_LENGTH_TIMER = 0x3F,
 
   /** NRx2 masks */
   APU_ENVELOPE_PACE = 0x07,
