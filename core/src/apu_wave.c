@@ -51,6 +51,16 @@ status_code_t apu_wave_tick(apu_wave_handle_t *const apu_wave)
   return STATUS_OK;
 }
 
+status_code_t apu_wave_reset(apu_wave_handle_t *const apu_wave)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(apu_wave);
+
+  memset(&apu_wave->state, 0, sizeof(apu_wave_state_t));
+  memset(&apu_wave->registers, 0, sizeof(apu_wave_registers_t));
+
+  return STATUS_OK;
+}
+
 status_code_t apu_wave_sample(apu_wave_handle_t *const apu_wave, float *const sample_out)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(apu_wave);

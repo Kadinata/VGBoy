@@ -42,6 +42,7 @@ typedef struct
 
 status_code_t apu_lfsr_init(apu_lfsr_handle_t *const apu_lfsr);
 status_code_t apu_lfsr_tick(apu_lfsr_handle_t *const apu_lfsr);
+status_code_t apu_lfsr_reset(apu_lfsr_handle_t *const apu_lfsr);
 status_code_t apu_lfsr_sample(apu_lfsr_handle_t *const apu_lfsr, float *const sample_out);
 status_code_t apu_lfsr_handle_frame_sequencer(apu_lfsr_handle_t *const apu_lfsr, uint8_t const frame_step);
 

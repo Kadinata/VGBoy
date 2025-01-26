@@ -62,6 +62,7 @@ typedef struct
 
 status_code_t apu_pwm_init(apu_pwm_handle_t *const apu_pwm, bool const with_sweep);
 status_code_t apu_pwm_tick(apu_pwm_handle_t *const apu_pwm);
+status_code_t apu_pwm_reset(apu_pwm_handle_t *const apu_pwm);
 status_code_t apu_pwm_sample(apu_pwm_handle_t *const apu_pwm, float *const sample_out);
 status_code_t apu_pwm_handle_frame_sequencer(apu_pwm_handle_t *const apu_pwm, uint8_t const frame_step);
 

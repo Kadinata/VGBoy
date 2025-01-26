@@ -82,6 +82,9 @@ void test_registers_read_and_write(void)
   uint8_t data = 0;
   uint8_t index = 0;
 
+  /** Make sure the APU is enabled to enable writing to registers */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0x80));
+
   for (uint16_t addr = 0xFF10; addr < 0xFF26; addr++)
   {
     TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, addr, 0x55));

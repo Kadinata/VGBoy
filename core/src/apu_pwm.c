@@ -57,6 +57,20 @@ status_code_t apu_pwm_tick(apu_pwm_handle_t *const apu_pwm)
   return STATUS_OK;
 }
 
+status_code_t apu_pwm_reset(apu_pwm_handle_t *const apu_pwm)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(apu_pwm);
+
+  bool has_sweep = apu_pwm->state.sweep.available;
+
+  memset(&apu_pwm->state, 0, sizeof(apu_pwm_state_t));
+  memset(&apu_pwm->registers, 0, sizeof(apu_pwm_registers_t));
+
+  apu_pwm->state.sweep.available = has_sweep;
+
+  return STATUS_OK;
+}
+
 status_code_t apu_pwm_sample(apu_pwm_handle_t *const apu_pwm, float *const sample_out)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(apu_pwm);

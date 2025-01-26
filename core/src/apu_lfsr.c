@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "apu_common.h"
 #include "bus_interface.h"
@@ -49,6 +50,16 @@ status_code_t apu_lfsr_tick(apu_lfsr_handle_t *const apu_lfsr)
   }
 
   apu_lfsr->state.period_counter--;
+  return STATUS_OK;
+}
+
+status_code_t apu_lfsr_reset(apu_lfsr_handle_t *const apu_lfsr)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(apu_lfsr);
+
+  memset(&apu_lfsr->state, 0, sizeof(apu_lfsr_state_t));
+  memset(&apu_lfsr->registers, 0, sizeof(apu_lfsr_registers_t));
+
   return STATUS_OK;
 }
 

@@ -57,6 +57,7 @@ typedef struct
 
 status_code_t apu_wave_init(apu_wave_handle_t *const apu_wave);
 status_code_t apu_wave_tick(apu_wave_handle_t *const apu_wave);
+status_code_t apu_wave_reset(apu_wave_handle_t *const apu_wave);
 status_code_t apu_wave_sample(apu_wave_handle_t *const apu_wave, float *const sample_out);
 status_code_t apu_wave_handle_frame_sequencer(apu_wave_handle_t *const apu_wave, uint8_t const frame_step);
 

@@ -17,6 +17,7 @@
 
 static status_code_t apu_bus_read(void *const resource, uint16_t const address, uint8_t *const data);
 static status_code_t apu_bus_write(void *const resource, uint16_t const address, uint8_t const data);
+static status_code_t apu_reset(apu_handle_t *const apu);
 static status_code_t apu_sample(apu_handle_t *const apu, float *const left_sample, float *const right_sample);
 static status_code_t apu_playback(void *const ctx, const void *arg);
 
@@ -73,6 +74,28 @@ status_code_t apu_tick(apu_handle_t *const apu)
     apu->frame_sequencer.frame_step++;
     apu->frame_sequencer.frame_step &= 0x7;
   }
+
+  return STATUS_OK;
+}
+
+static status_code_t apu_reset(apu_handle_t *const apu)
+{
+  status_code_t status = STATUS_OK;
+
+  memset(&apu->registers, 0, sizeof(apu_registers_t));
+  memset(&apu->frame_sequencer, 0, sizeof(apu_frame_sequencer_counter_t));
+
+  status = apu_pwm_reset(&apu->ch1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = apu_pwm_reset(&apu->ch2);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = apu_wave_reset(&apu->ch3);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = apu_lfsr_reset(&apu->ch4);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;
 }
@@ -219,27 +242,29 @@ static status_code_t apu_bus_write(void *const resource, uint16_t const address,
   apu_handle_t *const apu = (apu_handle_t *)resource;
   status_code_t status = STATUS_OK;
 
-  if ((address >= 0x0000) && (address < 0x0005))
+  bool apu_enabled = !!(apu->registers.actl & APU_ACTL_AUDIO_EN);
+
+  if ((address >= 0x0000) && (address < 0x0005) && apu_enabled)
   {
     status = bus_interface_write(&apu->ch1.bus_interface, address, data);
   }
-  else if ((address >= 0x0005) && (address < 0x000A))
+  else if ((address >= 0x0005) && (address < 0x000A) && apu_enabled)
   {
     status = bus_interface_write(&apu->ch2.bus_interface, address, data);
   }
-  else if ((address >= 0x000A) && (address < 0x000F))
+  else if ((address >= 0x000A) && (address < 0x000F) && apu_enabled)
   {
     status = bus_interface_write(&apu->ch3.bus_interface, address, data);
   }
-  else if ((address >= 0x000F) && (address < 0x0014))
+  else if ((address >= 0x000F) && (address < 0x0014) && apu_enabled)
   {
     status = bus_interface_write(&apu->ch4.bus_interface, address, data);
   }
-  else if (address == 0x0014)
+  else if ((address == 0x0014) && apu_enabled)
   {
     apu->registers.mvp = data;
   }
-  else if (address == 0x0015)
+  else if ((address == 0x0015) && apu_enabled)
   {
     apu->registers.sndp = data;
   }
@@ -247,6 +272,11 @@ static status_code_t apu_bus_write(void *const resource, uint16_t const address,
   {
     apu->registers.actl &= ~APU_ACTL_AUDIO_EN;
     apu->registers.actl |= (data & APU_ACTL_AUDIO_EN);
+
+    if (!(apu->registers.actl & APU_ACTL_AUDIO_EN))
+    {
+      status = apu_reset(apu);
+    }
   }
   else if ((address >= 0x0020) && (address < 0x0030))
   {
