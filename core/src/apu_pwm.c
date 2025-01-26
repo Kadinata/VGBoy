@@ -39,22 +39,6 @@ status_code_t apu_pwm_init(apu_pwm_handle_t *const apu_pwm, bool const with_swee
 
   apu_pwm->state.sweep.available = with_sweep;
 
-  if (with_sweep)
-  {
-    apu_pwm->registers.sweep = 0x80;
-    apu_pwm->registers.tmrd = 0xBF;
-    apu_pwm->registers.volenv = 0xF3;
-  }
-  else
-  {
-    apu_pwm->registers.sweep = 0x00;
-    apu_pwm->registers.tmrd = 0x3F;
-    apu_pwm->registers.volenv = 0x00;
-  }
-
-  apu_pwm->registers.plow = 0xFF;
-  apu_pwm->registers.phctl = 0xBF;
-
   return STATUS_OK;
 }
 
@@ -76,7 +60,7 @@ status_code_t apu_pwm_tick(apu_pwm_handle_t *const apu_pwm)
 status_code_t apu_pwm_sample(apu_pwm_handle_t *const apu_pwm, float *const sample_out)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(apu_pwm);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(sample_out);  
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(sample_out);
 
   *sample_out = apu_pwm->state.enabled ? (get_current_amplitude(apu_pwm) * (apu_pwm->state.volume / 15.0f)) : 0.0f;
   return STATUS_OK;
@@ -252,6 +236,8 @@ static status_code_t apu_pwm_read(void *const resource, uint16_t const address, 
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
 
+  static const uint8_t read_masks[] = {0x80, 0x3F, 0x00, 0xFF, 0xBF};
+
   apu_pwm_handle_t *const apu_pwm = (apu_pwm_handle_t *)resource;
 
   switch (address)
@@ -260,7 +246,7 @@ static status_code_t apu_pwm_read(void *const resource, uint16_t const address, 
     *data = apu_pwm->state.sweep.available ? apu_pwm->registers.sweep : 0xFF;
     break;
   case 0x0001:
-    *data = apu_pwm->registers.tmrd | 0x3F;
+    *data = apu_pwm->registers.tmrd;
     break;
   case 0x0002:
     *data = apu_pwm->registers.volenv;
@@ -269,11 +255,13 @@ static status_code_t apu_pwm_read(void *const resource, uint16_t const address, 
     *data = 0xFF;
     break;
   case 0x0004:
-    *data = apu_pwm->registers.phctl | 0x83;
+    *data = apu_pwm->registers.phctl;
     break;
   default:
     return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
   }
+
+  *data |= read_masks[address];
 
   return STATUS_OK;
 }

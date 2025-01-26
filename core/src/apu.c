@@ -201,6 +201,7 @@ static status_code_t apu_bus_read(void *const resource, uint16_t const address, 
     *data |= apu->ch2.state.enabled ? APU_ACTL_CH2_EN : 0;
     *data |= apu->ch3.state.enabled ? APU_ACTL_CH3_EN : 0;
     *data |= apu->ch4.state.enabled ? APU_ACTL_CH4_EN : 0;
+    *data |= 0x70; /* Bit 6-4 of this register are not used */
   }
   else if ((address >= 0x0020) && (address < 0x0030))
   {

@@ -33,11 +33,6 @@ status_code_t apu_wave_init(apu_wave_handle_t *const apu_wave)
 
   memset(apu_wave->wave_ram.data, 0, sizeof(apu_wave->wave_ram.data));
 
-  apu_wave->registers.ltmr = 0xFF;
-  apu_wave->registers.vol = ~(APU_WAVE_VOL);
-  apu_wave->registers.plow = 0xFF;
-  apu_wave->registers.phctl = 0xBF;
-
   return STATUS_OK;
 }
 
@@ -109,18 +104,20 @@ static status_code_t apu_wave_read(void *const resource, uint16_t const address,
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
 
+  static const uint8_t read_masks[] = {0x7F, 0xFF, 0x9F, 0xFF, 0xBF};
+
   apu_wave_handle_t *const apu_wave = (apu_wave_handle_t *)resource;
 
   switch (address)
   {
   case 0x0000:
-    *data = (apu_wave->state.enabled ? APU_WAVE_DAC_EN : 0) | ~(APU_WAVE_DAC_EN);
+    *data = (apu_wave->state.enabled ? APU_WAVE_DAC_EN : 0);
     break;
   case 0x0001:
     *data = 0xFF; /* NR31 is write only */
     break;
   case 0x0002:
-    *data = apu_wave->registers.vol | ~APU_WAVE_VOL;
+    *data = apu_wave->registers.vol;
     break;
   case 0x0003:
     *data = 0xFF; /* NR33 is write only */
@@ -131,6 +128,8 @@ static status_code_t apu_wave_read(void *const resource, uint16_t const address,
   default:
     return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
   }
+
+  *data |= read_masks[address];
 
   return STATUS_OK;
 }

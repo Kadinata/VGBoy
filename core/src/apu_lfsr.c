@@ -131,6 +131,8 @@ static status_code_t apu_lfsr_read(void *const resource, uint16_t const address,
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
 
+  static const uint8_t read_masks[] = {0xFF, 0xFF, 0x00, 0x00, 0xBF};
+
   apu_lfsr_handle_t *const apu_lfsr = (apu_lfsr_handle_t *)resource;
 
   switch (address)
@@ -153,6 +155,8 @@ static status_code_t apu_lfsr_read(void *const resource, uint16_t const address,
   default:
     return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
   }
+
+  *data |= read_masks[address];
 
   return STATUS_OK;
 }
