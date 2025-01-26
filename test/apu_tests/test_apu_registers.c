@@ -77,8 +77,6 @@ void test_unused_regions_initial_values(void)
 
 void test_registers_read_and_write(void)
 {
-  /** All registers except NR52 */
-
   uint8_t data = 0;
   uint8_t index = 0;
 
@@ -100,6 +98,15 @@ void test_registers_read_and_write(void)
     TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, addr, &data));
     TEST_ASSERT_EQUAL_HEX8(0xAA | apu_reg_masks[index++], data);
   }
+
+  /** NR52 specific test */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0x00));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, 0xFF26, &data));
+  TEST_ASSERT_EQUAL_HEX8(apu_reg_masks[22], data);
+
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0xFF));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, 0xFF26, &data));
+  TEST_ASSERT_EQUAL_HEX8(APU_ACTL_AUDIO_EN | apu_reg_masks[22], data);
 }
 
 void test_wave_ram_read_and_write(void)
@@ -137,5 +144,76 @@ void test_unused_regions_read_and_write(void)
     TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, addr, 0xAA));
     TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, addr, &data));
     TEST_ASSERT_EQUAL_HEX8(0xFF, data);
+  }
+}
+
+void test_disabling_apu_should_preserve_wave_ram_contents(void)
+{
+  uint8_t data = 0;
+
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, APU_ACTL_AUDIO_EN));
+
+  for (uint16_t addr = 0xFF30; addr < 0xFF40; addr++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, addr, 0xAA));
+  }
+
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0x00));
+
+  for (uint16_t addr = 0xFF30; addr < 0xFF40; addr++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, addr, &data));
+    TEST_ASSERT_EQUAL_HEX8(0xAA, data);
+  }
+}
+
+void test_disabling_apu_should_reset_register_values(void)
+{
+  uint8_t data = 0;
+  uint8_t index = 0;
+
+  /** Make sure the APU is enabled to enable writing to registers */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0x80));
+
+  /** Set all register bits to 1 except for NR52 */
+  for (uint16_t addr = 0xFF10; addr < 0xFF26; addr++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, addr, 0xFF));
+  }
+
+  /** Disable, then re-enable the APU */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0x00));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, APU_ACTL_AUDIO_EN));
+
+  /** Register values should revert to their initial values */
+  for (uint16_t addr = 0xFF10; addr < 0xFF26; addr++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, addr, &data));
+    TEST_ASSERT_EQUAL_HEX8(apu_reg_masks[index++], data);
+  }
+}
+
+void test_disabling_apu_should_disable_register_writes(void)
+{
+  uint8_t data = 0;
+  uint8_t index = 0;
+
+  /** Make sure the APU is disabled */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, 0x00));
+
+  /** Set all register bits to 1 except for NR52 */
+  for (uint16_t addr = 0xFF10; addr < 0xFF26; addr++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, addr, 0xFF));
+  }
+
+  /** Re-enable the APU */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&apu.bus_interface, 0xFF26, APU_ACTL_AUDIO_EN));
+
+  /** Register values should retain their initial values */
+  for (uint16_t addr = 0xFF10; addr < 0xFF26; addr++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&apu.bus_interface, addr, &data));
+    TEST_ASSERT_EQUAL_HEX8(apu_reg_masks[index++], data);
   }
 }
