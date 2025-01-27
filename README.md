@@ -31,7 +31,12 @@ This is a perrsonal project that served as a learning opportunity for me to get 
 ## Setup & Build
 
 ```sh
+# Setup
+git clone https://github.com/Kadinata/VGBoy.git
+cd VGBoy
 mkdir bin
+
+# Build
 cd bin
 cmake ..
 make clean
