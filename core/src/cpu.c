@@ -153,7 +153,7 @@ static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t addre
 static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t address, uint16_t *const data);
 static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data);
 
-static status_code_t handle_interrupt(void *const ctx, const void* arg);
+static status_code_t handle_interrupt(void *const ctx, const void *arg);
 static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle_count);
 
 status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
@@ -617,7 +617,8 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
     int8_t owed_cycles = calc_cycle(opcode, state) - state->current_inst_m_cycle_count;
     if (owed_cycles > 0)
     {
-      sync_cycles(state, owed_cycles);
+      status = sync_cycles(state, owed_cycles);
+      RETURN_STATUS_IF_NOT_OK(status);
     }
 
     /**
@@ -630,7 +631,9 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
   }
   else if (state->run_mode == RUN_MODE_HALTED)
   {
-    sync_cycles(state, 1);
+    status = sync_cycles(state, 1);
+    RETURN_STATUS_IF_NOT_OK(status);
+
     if (state->interrupt.regs.irf) // TODO: create interface (?)
     {
       state->run_mode = RUN_MODE_NORMAL;
@@ -687,7 +690,8 @@ static status_code_t handle_interrupt(void *const ctx, const void *arg)
   status = push_reg_16(state, &state->registers.pc);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  sync_cycles(state, 2);
+  status = sync_cycles(state, 2);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   state->registers.pc = isr_address;
 
@@ -755,13 +759,21 @@ reg_16_ptr_t reg_16_select(cpu_state_t *const state, addressing_mode_t const add
 
 static inline status_code_t bus_read_8(cpu_state_t *const state, uint16_t address, uint8_t *const data)
 {
-  sync_cycles(state, 1);
+  status_code_t status;
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   return bus_interface_read(&state->bus_interface, address, data);
 }
 
 static inline status_code_t bus_write_8(cpu_state_t *const state, uint16_t address, uint8_t const data)
 {
-  sync_cycles(state, 1);
+  status_code_t status;
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   return bus_interface_write(&state->bus_interface, address, data);
 }
 
@@ -1022,9 +1034,11 @@ status_code_t read_reg_16_plus_offset(cpu_state_t *const state, addressing_mode_
   update_flags(state, FLAG_Z | FLAG_N, F_CLEAR);
   update_flags(state, FLAG_H, half_carry ? F_SET : F_CLEAR);
   update_flags(state, FLAG_C, full_carry ? F_SET : F_CLEAR);
-  sync_cycles(state, 1);
 
-  return status;
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t op_NOT_IMPL(cpu_state_t *const __attribute__((unused)) state, inst_operands_t *const __attribute__((unused)) operands)
@@ -1061,9 +1075,11 @@ status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands)
   if (check_cond(state, operands->jump_mode))
   {
     state->registers.pc += offset;
-    sync_cycles(state, 1);
+    status = sync_cycles(state, 1);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
-  return status;
+
+  return STATUS_OK;
 }
 
 status_code_t op_JP(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1148,8 +1164,11 @@ status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operand
   {
     ++(*dest);
   }
-  sync_cycles(state, 1);
-  return status;
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1177,8 +1196,11 @@ status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operand
   {
     --(*dest);
   }
-  sync_cycles(state, 1);
-  return status;
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t op_ADD_8(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1351,6 +1373,7 @@ status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands)
 
 status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operands)
 {
+  status_code_t status = STATUS_OK;
 
   reg_16_ptr_t source = reg_16_select(state, operands->source);
   reg_16_ptr_t dest = reg_16_select(state, operands->dest);
@@ -1368,7 +1391,9 @@ status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operand
   update_flags(state, FLAG_N, F_CLEAR);
   update_flags(state, FLAG_H, half_carry ? F_SET : F_CLEAR);
   update_flags(state, FLAG_C, full_carry ? F_SET : F_CLEAR);
-  sync_cycles(state, 1);
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;
 }
@@ -1451,7 +1476,11 @@ status_code_t op_CCF(cpu_state_t *const state, inst_operands_t *const __attribut
 
 status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands)
 {
-  sync_cycles(state, 1);
+  status_code_t status = STATUS_OK;
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   if (check_cond(state, operands->jump_mode))
   {
     return pop_reg_16(state, &state->registers.pc);
@@ -1470,11 +1499,15 @@ status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands)
   if (check_cond(state, operands->jump_mode))
   {
     status = push_reg_16(state, &state->registers.pc);
+    RETURN_STATUS_IF_NOT_OK(status);
+
     state->registers.pc = address;
-    sync_cycles(state, 1);
+
+    status = sync_cycles(state, 1);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_POP(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1486,17 +1519,26 @@ status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
   status = push_reg_16(state, reg_16_select(state, operands->dest));
-  sync_cycles(state, 1);
-  return status;
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
   status = push_reg_16(state, &state->registers.pc);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   state->registers.pc = operands->reset_vector;
-  sync_cycles(state, 1);
-  return status;
+
+  status = sync_cycles(state, 1);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
