@@ -1,7 +1,7 @@
 # Set the CMake minimum required version
 cmake_minimum_required(VERSION 3.27)
 
-project(gb_emu C)
+project(VGBoy C)
 
 set(CMAKE_C_STANDARD 11)
 

@@ -32,7 +32,7 @@ status_code_t main_window_init(uint32_t *const video_buffer, uint16_t window_wid
   window_ctx.window_width = window_width;
   window_ctx.window_height = window_height;
 
-  status = window_init("Gameboy Emulator", &window_ctx.window, &main_window_init_params);
+  status = window_init("VGBoy Gameboy Emulator", &window_ctx.window, &main_window_init_params);
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;
