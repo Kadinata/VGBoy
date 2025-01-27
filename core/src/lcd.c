@@ -10,10 +10,10 @@ static status_code_t lcd_read(void *const resource, uint16_t const address, uint
 static status_code_t lcd_write(void *const resource, uint16_t const address, uint8_t const data);
 
 static const color_rgba_t default_palette_colors[4] = {
-    {.r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF},
-    {.r = 0xAA, .g = 0xAA, .b = 0xAA, .a = 0xFF},
-    {.r = 0x55, .g = 0x55, .b = 0x55, .a = 0xFF},
-    {.r = 0x00, .g = 0x00, .b = 0x00, .a = 0xFF},
+    {.r = 0xE0, .g = 0xFD, .b = 0xD0, .a = 0xFF},
+    {.r = 0x88, .g = 0xC0, .b = 0x70, .a = 0xFF},
+    {.r = 0x34, .g = 0x68, .b = 0x56, .a = 0xFF},
+    {.r = 0x08, .g = 0x18, .b = 0x20, .a = 0xFF},
 };
 
 status_code_t lcd_init(lcd_handle_t *const handle)
