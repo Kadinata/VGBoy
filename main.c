@@ -85,6 +85,8 @@ int main(int __attribute__((unused)) argc, char **argv)
     {
       break;
     }
+
+    update_display();
   }
 
   Log_I("Stopping");

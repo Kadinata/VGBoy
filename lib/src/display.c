@@ -12,12 +12,18 @@
 #include "fps_sync.h"
 #include "color.h"
 
-static fps_sync_handle_t fps_sync_handle;
+typedef struct
+{
+  fps_sync_handle_t fps_sync_handle;
+  ppu_handle_t *ppu;
+  uint32_t prev_ppu_frame;
+} display_handle_t;
+
+static display_handle_t display_handle;
 
 static status_code_t handle_fps_sync(void *const ctx, const void __attribute__((unused)) * arg)
 {
   fps_sync_handle_t *const handle = (fps_sync_handle_t *)ctx;
-  update_display();
   return fps_sync(handle);
 }
 
@@ -37,16 +43,19 @@ status_code_t display_init(bus_interface_t const data_bus_interface, ppu_handle_
 
   callback_t fps_sync_callback = {0};
 
+  display_handle.ppu = ppu_handle;
+  display_handle.prev_ppu_frame = 0;
+
   status = tile_debug_window_init(data_bus_interface);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = main_window_init(ppu_handle->video_buffer.buffer, SCREEN_WIDTH, SCREEN_HEIGHT);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = callback_init(&fps_sync_callback, handle_fps_sync, (void *)&fps_sync_handle);
+  status = callback_init(&fps_sync_callback, handle_fps_sync, (void *)&display_handle.fps_sync_handle);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = fps_sync_init(&fps_sync_handle, 60);
+  status = fps_sync_init(&display_handle.fps_sync_handle, 60);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = ppu_register_fps_sync_callback(ppu_handle, &fps_sync_callback);
@@ -66,6 +75,10 @@ void display_cleanup(void)
 
 void update_display(void)
 {
-  main_window_update();
-  tile_debug_window_update();
+  if (display_handle.prev_ppu_frame != display_handle.ppu->current_frame)
+  {
+    main_window_update();
+    tile_debug_window_update();
+  }
+  display_handle.prev_ppu_frame = display_handle.ppu->current_frame;
 }
