@@ -10,7 +10,7 @@
  */
 typedef struct
 {
-  uint32_t frame_interval_ms;    /** Desired duration between frames in milliseconds */
+  double frame_interval_sec;
   uint64_t last_frame_timestamp; /** Timestamp of the previous frame rendering */
   uint64_t secondly_timestamp;   /** Timestamp to keep track of when a second has elapsed */
   uint16_t actual_frame_rate;    /** The actual number of frames rendered in a second */

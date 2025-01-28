@@ -14,7 +14,7 @@ status_code_t fps_sync_init(fps_sync_handle_t *const handle, uint32_t const targ
   handle->actual_frame_rate = 0;
   handle->last_frame_timestamp = 0;
   handle->secondly_timestamp = 0;
-  handle->frame_interval_ms = 1000 / target_frame_rate;
+  handle->frame_interval_sec = 1.0 / target_frame_rate;
 
   return STATUS_OK;
 }
@@ -23,23 +23,30 @@ status_code_t fps_sync(fps_sync_handle_t *const handle)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
 
-  uint32_t current_timestamp = SDL_GetTicks();
-  uint32_t current_frame_interval = current_timestamp - handle->last_frame_timestamp;
+  uint64_t initial_timestamp = SDL_GetPerformanceCounter();
+  uint64_t current_timestamp = initial_timestamp;
+  double frame_interval = (current_timestamp - handle->last_frame_timestamp);
+  frame_interval /= SDL_GetPerformanceFrequency();
 
-  if (current_frame_interval < handle->frame_interval_ms)
+  while (frame_interval < handle->frame_interval_sec)
   {
-    SDL_Delay((handle->frame_interval_ms - current_frame_interval));
+    current_timestamp = SDL_GetPerformanceCounter();
+    frame_interval = (current_timestamp - handle->last_frame_timestamp);
+    frame_interval /= SDL_GetPerformanceFrequency();
   }
 
-  if (current_timestamp - handle->secondly_timestamp >= 1000)
+  double time_delta = (initial_timestamp - handle->secondly_timestamp);
+  time_delta /= SDL_GetPerformanceFrequency();
+
+  if (time_delta >= 1.0)
   {
     Log_I("FPS: %u", handle->actual_frame_rate);
-    handle->secondly_timestamp = current_timestamp;
+    handle->secondly_timestamp = initial_timestamp;
     handle->actual_frame_rate = 0;
   }
 
   handle->actual_frame_rate++;
-  handle->last_frame_timestamp = SDL_GetTicks();
+  handle->last_frame_timestamp = SDL_GetPerformanceCounter();
 
   return STATUS_OK;
 }
