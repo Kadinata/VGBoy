@@ -136,8 +136,8 @@ typedef union
 reg_8_ptr_t reg_8_select(cpu_state_t *const state, addressing_mode_t const addr_mode);
 reg_16_ptr_t reg_16_select(cpu_state_t *const state, addressing_mode_t const addr_mode);
 uint8_t calc_cycle(uint8_t opcode, cpu_state_t *const state);
-void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode);
-uint8_t check_cond(cpu_state_t *const state, jump_mode_t mode);
+static inline void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode);
+static inline uint8_t check_cond(cpu_state_t *const state, jump_mode_t mode);
 
 static status_code_t fetch(cpu_state_t *const state, uint8_t *const data);
 status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t *const data);
@@ -648,6 +648,8 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
   if (state->interrupt.regs.ime) // TODO: create interface (?)
   {
     status = service_interrupt(&state->interrupt);
+    RETURN_STATUS_IF_NOT_OK(status);
+
     state->next_ime_flag = 0;
   }
 
@@ -781,18 +783,27 @@ static inline status_code_t bus_read_16(cpu_state_t *const state, uint16_t addre
 {
   uint8_t lsb, msb;
   status_code_t status;
-  status = bus_read_8(state, address, &lsb); // TODO: check status
+  status = bus_read_8(state, address, &lsb);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   status = bus_read_8(state, address + 1, &msb);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   *data = (msb << 8) | lsb;
-  return status;
+
+  return STATUS_OK;
 }
 
 static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t address, uint16_t const data)
 {
   status_code_t status;
-  status = bus_write_8(state, address, (data & 0xFF)); // TODO: check status
+  status = bus_write_8(state, address, (data & 0xFF));
+  RETURN_STATUS_IF_NOT_OK(status);
+
   status = bus_write_8(state, address + 1, (data >> 8) & 0xFF);
-  return status;
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t *const data)
@@ -818,13 +829,13 @@ status_code_t read_8(cpu_state_t *const state, addressing_mode_t const addr_mode
   case AM_MEM_FF_REG_C:
     return bus_read_8(state, (0xFF00 | regs->c), data);
   case AM_IMM_FF_A_8:
-    status = fetch(state, &address.lsb); /* TODO check status */
-    status = bus_read_8(state, (0xFF00 | address.lsb), data);
-    return status;
+    status = fetch(state, &address.lsb);
+    RETURN_STATUS_IF_NOT_OK(status);
+    return bus_read_8(state, (0xFF00 | address.lsb), data);
   case AM_IMM_A_16:
-    status = read_16(state, addr_mode, &address.val); /* TODO check status */
-    status = bus_read_8(state, address.val, data);
-    return status;
+    status = read_16(state, addr_mode, &address.val);
+    RETURN_STATUS_IF_NOT_OK(status);
+    return bus_read_8(state, address.val, data);
   default:
     if ((source = reg_8_select(state, addr_mode)) == NULL)
     {
@@ -857,13 +868,13 @@ status_code_t write_8(cpu_state_t *const state, addressing_mode_t const addr_mod
   case AM_MEM_FF_REG_C:
     return bus_write_8(state, (0xFF00 | regs->c), data);
   case AM_IMM_FF_A_8:
-    status = fetch(state, &address.lsb); /* TODO check status */
-    status = bus_write_8(state, (0xFF00 | address.lsb), data);
-    return status;
+    status = fetch(state, &address.lsb);
+    RETURN_STATUS_IF_NOT_OK(status);
+    return bus_write_8(state, (0xFF00 | address.lsb), data);
   case AM_IMM_A_16:
-    status = read_16(state, addr_mode, &address.val); /* TODO check status */
-    status = bus_write_8(state, address.val, data);
-    return status;
+    status = read_16(state, addr_mode, &address.val);
+    RETURN_STATUS_IF_NOT_OK(status);
+    return bus_write_8(state, address.val, data);
   default:
     if ((source = reg_8_select(state, addr_mode)) == NULL)
     {
@@ -909,7 +920,11 @@ status_code_t write_16(cpu_state_t *const state, addressing_mode_t const addr_mo
   if (addr_mode == AM_IMM_A_16)
   {
     status = bus_read_16(state, state->registers.pc, &address);
+    RETURN_STATUS_IF_NOT_OK(status);
+
     status = bus_write_16(state, address, data);
+    RETURN_STATUS_IF_NOT_OK(status);
+
     state->registers.pc += 2;
   }
   else
@@ -922,7 +937,7 @@ status_code_t write_16(cpu_state_t *const state, addressing_mode_t const addr_mo
     *dest = data;
   }
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t pop_reg_16(cpu_state_t *const state, reg_16_ptr_t reg)
@@ -940,7 +955,7 @@ status_code_t push_reg_16(cpu_state_t *const state, reg_16_ptr_t reg)
   return bus_write_16(state, state->registers.sp, *reg);
 }
 
-void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode)
+static inline void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode)
 {
   registers_t *const regs = &state->registers;
 
@@ -960,7 +975,7 @@ void update_flags(cpu_state_t *const state, uint8_t mask, flag_mode_t mode)
   }
 }
 
-uint8_t check_cond(cpu_state_t *const state, jump_mode_t mode)
+static inline uint8_t check_cond(cpu_state_t *const state, jump_mode_t mode)
 {
   registers_t *const regs = &state->registers;
 
@@ -1107,6 +1122,7 @@ status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands)
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = write_8(state, operands->dest, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   if ((operands->dest == AM_MEM_HL_INC) || (operands->source == AM_MEM_HL_INC))
   {
@@ -1117,7 +1133,7 @@ status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands)
     state->registers.hl--;
   }
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_LD_16(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1148,12 +1164,13 @@ status_code_t op_INC_8(cpu_state_t *const state, inst_operands_t *const operands
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = write_8(state, operands->dest, ++data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N, F_CLEAR);
   update_flags(state, FLAG_H, ((data & 0xF) == 0x0) ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1180,12 +1197,13 @@ status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = write_8(state, operands->dest, --data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N, F_SET);
   update_flags(state, FLAG_H, ((data & 0xF) == 0xF) ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1360,6 +1378,8 @@ status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands)
   RETURN_STATUS_IF_NOT_OK(status);
 
   reg_8_ptr_t dest = reg_8_select(state, operands->dest);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   uint8_t half_carry = ((*dest & 0x0F) < (data & 0x0F)) ? 1 : 0;
   uint8_t full_carry = (*dest < data) ? 1 : 0;
 
@@ -1368,7 +1388,7 @@ status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands)
   update_flags(state, FLAG_H, half_carry ? F_SET : F_CLEAR);
   update_flags(state, FLAG_C, full_carry ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operands)
@@ -1648,8 +1668,6 @@ status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribu
     break;
   }
 
-  // state->m_cycles += (target == AM_MEM_HL) ? ((handler_family == 1) ? 3 : 4) : 2;
-
   return status;
 }
 
@@ -1667,12 +1685,13 @@ status_code_t op_RLC(cpu_state_t *const state, addressing_mode_t const addr_mode
   data |= msb ? 1 : 0;
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, msb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1688,12 +1707,13 @@ status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode
   data |= lsb ? (1 << 7) : 0;
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, lsb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1709,12 +1729,13 @@ status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode)
   data |= (state->registers.f & FLAG_C) ? 1 : 0;
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, msb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1730,12 +1751,13 @@ status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode)
   data |= (state->registers.f & FLAG_C) ? (1 << 7) : 0;
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, lsb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1750,12 +1772,13 @@ status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode
   data <<= 1;
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, msb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1771,12 +1794,13 @@ status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode
   data = msb | (data >> 1);
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, lsb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1788,12 +1812,14 @@ status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mod
   RETURN_STATUS_IF_NOT_OK(status);
 
   data = ((data & 0xF) << 4) | ((data >> 4) & 0xF);
+
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H | FLAG_C, F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode)
@@ -1808,12 +1834,13 @@ status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode
   data >>= 1;
 
   status = write_8(state, addr_mode, data);
+  RETURN_STATUS_IF_NOT_OK(status);
 
   update_flags(state, FLAG_Z, (data == 0) ? F_SET : F_CLEAR);
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, lsb ? F_SET : F_CLEAR);
 
-  return status;
+  return STATUS_OK;
 }
 
 status_code_t op_BIT(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
