@@ -156,57 +156,57 @@ static inline status_code_t bus_write_16(cpu_state_t *const state, uint16_t addr
 static status_code_t handle_interrupt(void *const ctx, const void *arg);
 static status_code_t sync_cycles(cpu_state_t *const state, uint8_t const m_cycle_count);
 
-status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_NOP(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_STOP(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_HALT(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_JP(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_LD_16(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_INC_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_ADD_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_ADC_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_SUB_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_SBC_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_AND_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_XOR_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_OR_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RLCA(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RRCA(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RLA(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RRA(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_CPL(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_SCF(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_CCF(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_POP(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_EI(cpu_state_t *const state, inst_operands_t *const operands);
-status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_NOT_IMPL(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_NOP(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_STOP(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_HALT(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_JP(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_LD_16(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_INC_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_ADD_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_ADC_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_SUB_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_SBC_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_AND_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_XOR_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_OR_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RLCA(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RRCA(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RLA(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RRA(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_CPL(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_SCF(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_CCF(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_POP(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_EI(cpu_state_t *const state, inst_operands_t *const operands);
+static status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const operands);
 
 /* Ops for CB-prefixed opcodes */
-status_code_t op_RLC(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode);
-status_code_t op_BIT(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index);
-status_code_t op_RES(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index);
-status_code_t op_SET(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index);
+static status_code_t op_RLC(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode);
+static status_code_t op_BIT(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index);
+static status_code_t op_RES(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index);
+static status_code_t op_SET(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index);
 
 static instruction_t inst_table[] = {
     /* 0x00 - 0x0F */
@@ -1056,30 +1056,30 @@ status_code_t read_reg_16_plus_offset(cpu_state_t *const state, addressing_mode_
   return STATUS_OK;
 }
 
-status_code_t op_NOT_IMPL(cpu_state_t *const __attribute__((unused)) state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_NOT_IMPL(cpu_state_t *const __attribute__((unused)) state, inst_operands_t *const __attribute__((unused)) operands)
 {
   return STATUS_ERR_UNDEFINED_INST;
 }
 
-status_code_t op_NOP(cpu_state_t *const __attribute__((unused)) state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_NOP(cpu_state_t *const __attribute__((unused)) state, inst_operands_t *const __attribute__((unused)) operands)
 {
   return STATUS_OK;
 }
 
-status_code_t op_STOP(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_STOP(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   state->registers.pc++;
   // state->run_mode = RUN_MODE_STOPPED; // TODO: reenable
   return STATUS_OK;
 }
 
-status_code_t op_HALT(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_HALT(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   state->run_mode = RUN_MODE_HALTED;
   return STATUS_OK;
 }
 
-status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands)
 {
   int8_t offset;
   status_code_t status = STATUS_OK;
@@ -1097,7 +1097,7 @@ status_code_t op_JR(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_JP(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_JP(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint16_t address;
   status_code_t status = STATUS_OK;
@@ -1113,7 +1113,7 @@ status_code_t op_JP(cpu_state_t *const state, inst_operands_t *const operands)
   return status;
 }
 
-status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data = 0;
   status_code_t status = STATUS_OK;
@@ -1136,7 +1136,7 @@ status_code_t op_LD_8(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_LD_16(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_LD_16(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint16_t data = 0;
   status_code_t status = STATUS_OK;
@@ -1155,7 +1155,7 @@ status_code_t op_LD_16(cpu_state_t *const state, inst_operands_t *const operands
   return status;
 }
 
-status_code_t op_INC_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_INC_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1173,7 +1173,7 @@ status_code_t op_INC_8(cpu_state_t *const state, inst_operands_t *const operands
   return STATUS_OK;
 }
 
-status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
   reg_16_ptr_t dest = reg_16_select(state, operands->dest);
@@ -1188,7 +1188,7 @@ status_code_t op_INC_16(cpu_state_t *const state, inst_operands_t *const operand
   return STATUS_OK;
 }
 
-status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1206,7 +1206,7 @@ status_code_t op_DEC_8(cpu_state_t *const state, inst_operands_t *const operands
   return STATUS_OK;
 }
 
-status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
   reg_16_ptr_t dest = reg_16_select(state, operands->dest);
@@ -1221,7 +1221,7 @@ status_code_t op_DEC_16(cpu_state_t *const state, inst_operands_t *const operand
   return STATUS_OK;
 }
 
-status_code_t op_ADD_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_ADD_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
 
   uint8_t data;
@@ -1244,7 +1244,7 @@ status_code_t op_ADD_8(cpu_state_t *const state, inst_operands_t *const operands
   return status;
 }
 
-status_code_t op_ADC_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_ADC_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
 
   uint8_t data;
@@ -1268,7 +1268,7 @@ status_code_t op_ADC_8(cpu_state_t *const state, inst_operands_t *const operands
   return status;
 }
 
-status_code_t op_SUB_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_SUB_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1290,7 +1290,7 @@ status_code_t op_SUB_8(cpu_state_t *const state, inst_operands_t *const operands
   return status;
 }
 
-status_code_t op_SBC_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_SBC_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1314,7 +1314,7 @@ status_code_t op_SBC_8(cpu_state_t *const state, inst_operands_t *const operands
   return status;
 }
 
-status_code_t op_AND_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_AND_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1333,7 +1333,7 @@ status_code_t op_AND_8(cpu_state_t *const state, inst_operands_t *const operands
   return STATUS_OK;
 }
 
-status_code_t op_XOR_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_XOR_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1351,7 +1351,7 @@ status_code_t op_XOR_8(cpu_state_t *const state, inst_operands_t *const operands
   return STATUS_OK;
 }
 
-status_code_t op_OR_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_OR_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1369,7 +1369,7 @@ status_code_t op_OR_8(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1391,7 +1391,7 @@ status_code_t op_CP_8(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
 
@@ -1418,7 +1418,7 @@ status_code_t op_ADD_16(cpu_state_t *const state, inst_operands_t *const operand
   return STATUS_OK;
 }
 
-status_code_t op_RLCA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_RLCA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   registers_t *const regs = &state->registers;
 
@@ -1431,7 +1431,7 @@ status_code_t op_RLCA(cpu_state_t *const state, inst_operands_t *const __attribu
   return STATUS_OK;
 }
 
-status_code_t op_RRCA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_RRCA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   registers_t *const regs = &state->registers;
 
@@ -1444,7 +1444,7 @@ status_code_t op_RRCA(cpu_state_t *const state, inst_operands_t *const __attribu
   return STATUS_OK;
 }
 
-status_code_t op_RLA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_RLA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   registers_t *const regs = &state->registers;
 
@@ -1458,7 +1458,7 @@ status_code_t op_RLA(cpu_state_t *const state, inst_operands_t *const __attribut
   return STATUS_OK;
 }
 
-status_code_t op_RRA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_RRA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   registers_t *const regs = &state->registers;
 
@@ -1472,7 +1472,7 @@ status_code_t op_RRA(cpu_state_t *const state, inst_operands_t *const __attribut
   return STATUS_OK;
 }
 
-status_code_t op_CPL(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_CPL(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   registers_t *const regs = &state->registers;
   regs->a = ~(regs->a);
@@ -1480,21 +1480,21 @@ status_code_t op_CPL(cpu_state_t *const state, inst_operands_t *const __attribut
   return STATUS_OK;
 }
 
-status_code_t op_SCF(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_SCF(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, F_SET);
   return STATUS_OK;
 }
 
-status_code_t op_CCF(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_CCF(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   update_flags(state, FLAG_N | FLAG_H, F_CLEAR);
   update_flags(state, FLAG_C, F_INVERT);
   return STATUS_OK;
 }
 
-status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
 
@@ -1508,7 +1508,7 @@ status_code_t op_RET(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands)
 {
   uint16_t address;
   status_code_t status = STATUS_OK;
@@ -1530,12 +1530,12 @@ status_code_t op_CALL(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_POP(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_POP(cpu_state_t *const state, inst_operands_t *const operands)
 {
   return pop_reg_16(state, reg_16_select(state, operands->dest));
 }
 
-status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
   status = push_reg_16(state, reg_16_select(state, operands->dest));
@@ -1547,7 +1547,7 @@ status_code_t op_PUSH(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands)
+static status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands)
 {
   status_code_t status = STATUS_OK;
   status = push_reg_16(state, &state->registers.pc);
@@ -1561,7 +1561,7 @@ status_code_t op_RST(cpu_state_t *const state, inst_operands_t *const operands)
   return STATUS_OK;
 }
 
-status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   registers_t *const regs = &state->registers;
 
@@ -1595,26 +1595,26 @@ status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __attribut
   return STATUS_OK;
 }
 
-status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   state->interrupt.regs.ime = 1;
   return pop_reg_16(state, &state->registers.pc);
 }
 
-status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   state->interrupt.regs.ime = 0;
   state->next_ime_flag = 0;
   return STATUS_OK;
 }
 
-status_code_t op_EI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_EI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   state->next_ime_flag = 1;
   return STATUS_OK;
 }
 
-status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
+static status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
   static addressing_mode_t const target_lookup_table[] = {
       AM_REG_B,
@@ -1672,7 +1672,7 @@ status_code_t op_PRCB(cpu_state_t *const state, inst_operands_t *const __attribu
 }
 
 /* Ops for CB-prefixed opcodes */
-status_code_t op_RLC(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_RLC(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, msb;
   status_code_t status = STATUS_OK;
@@ -1694,7 +1694,7 @@ status_code_t op_RLC(cpu_state_t *const state, addressing_mode_t const addr_mode
   return STATUS_OK;
 }
 
-status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, lsb;
   status_code_t status = STATUS_OK;
@@ -1716,7 +1716,7 @@ status_code_t op_RRC(cpu_state_t *const state, addressing_mode_t const addr_mode
   return STATUS_OK;
 }
 
-status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, msb;
   status_code_t status = STATUS_OK;
@@ -1738,7 +1738,7 @@ status_code_t op_RL(cpu_state_t *const state, addressing_mode_t const addr_mode)
   return STATUS_OK;
 }
 
-status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, lsb;
   status_code_t status = STATUS_OK;
@@ -1760,7 +1760,7 @@ status_code_t op_RR(cpu_state_t *const state, addressing_mode_t const addr_mode)
   return STATUS_OK;
 }
 
-status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, msb;
   status_code_t status = STATUS_OK;
@@ -1781,7 +1781,7 @@ status_code_t op_SLA(cpu_state_t *const state, addressing_mode_t const addr_mode
   return STATUS_OK;
 }
 
-status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, msb, lsb;
   status_code_t status = STATUS_OK;
@@ -1803,7 +1803,7 @@ status_code_t op_SRA(cpu_state_t *const state, addressing_mode_t const addr_mode
   return STATUS_OK;
 }
 
-status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1822,7 +1822,7 @@ status_code_t op_SWAP(cpu_state_t *const state, addressing_mode_t const addr_mod
   return STATUS_OK;
 }
 
-status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode)
+static status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode)
 {
   uint8_t data, lsb;
   status_code_t status = STATUS_OK;
@@ -1843,7 +1843,7 @@ status_code_t op_SRL(cpu_state_t *const state, addressing_mode_t const addr_mode
   return STATUS_OK;
 }
 
-status_code_t op_BIT(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
+static status_code_t op_BIT(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1858,7 +1858,7 @@ status_code_t op_BIT(cpu_state_t *const state, addressing_mode_t const addr_mode
   return STATUS_OK;
 }
 
-status_code_t op_RES(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
+static status_code_t op_RES(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
@@ -1869,7 +1869,7 @@ status_code_t op_RES(cpu_state_t *const state, addressing_mode_t const addr_mode
   return write_8(state, addr_mode, (data & ~(1 << bit_index)));
 }
 
-status_code_t op_SET(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
+static status_code_t op_SET(cpu_state_t *const state, addressing_mode_t const addr_mode, uint8_t const bit_index)
 {
   uint8_t data;
   status_code_t status = STATUS_OK;
