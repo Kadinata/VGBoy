@@ -36,8 +36,8 @@ void *cpu_run(void *p)
 
 void cleanup(emulator_t *const emulator)
 {
-  display_cleanup();
   audio_cleanup();
+  display_cleanup();
   emulator_cleanup(emulator);
 }
 
