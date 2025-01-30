@@ -8,6 +8,12 @@
 #include "bus_interface.h"
 #include "status_code.h"
 
+typedef struct
+{
+  oam_entry_t entry;
+  uint8_t index;
+} indexed_oam_entry_t;
+
 static status_code_t oam_read(void *const resource, uint16_t const address, uint8_t *const data);
 static status_code_t oam_write(void *const resource, uint16_t const address, uint8_t const data);
 static inline bool scanline_intersects_sprite(oam_entry_t *oam_entry, uint8_t line_y, obj_size_t obj_size);
@@ -34,23 +40,37 @@ status_code_t oam_scan(oam_handle_t *const oam_handle, uint8_t const line_y, obj
   VERIFY_PTR_RETURN_ERROR_IF_NULL(scan_results);
   VERIFY_COND_RETURN_STATUS_IF_TRUE((sprite_size != OBJ_SIZE_LARGE) && (sprite_size != OBJ_SIZE_SMALL), STATUS_ERR_INVALID_ARG);
 
+  uint8_t index = 0;
+  uint8_t entry_count = 0;
+  indexed_oam_entry_t entries[10];
+
   memset(scan_results, 0, sizeof(oam_scanned_sprites_t));
 
-  uint8_t index = 0;
-
   // Scan until the end of OAM is reached or 10 sprites have been collected
-  while ((index < OAM_ENTRY_SIZE) && (scan_results->sprite_count < MAX_SPRITES_PER_LINE))
+  while ((index < OAM_ENTRY_SIZE) && (entry_count < MAX_SPRITES_PER_LINE))
   {
     oam_entry_t *const oam_entry = &oam_handle->entries[index++];
 
     if (scanline_intersects_sprite(oam_entry, line_y, sprite_size))
     {
-      scan_results->sprite_attributes[scan_results->sprite_count++] = *oam_entry;
+      entries[entry_count].entry = *oam_entry;
+      entries[entry_count].index = entry_count;
+      entry_count++;
     }
   }
 
-  // Sort the sprites based on their X coordinate in ascending order
-  qsort(scan_results->sprite_attributes, scan_results->sprite_count, sizeof(oam_entry_t), sort_compare);
+  /**
+   * Sort the sprites based on their X coordinate in ascending order,
+   * and then based on their index in ascending order if the entries
+   * have the same X coordinate.
+   */
+  qsort(entries, entry_count, sizeof(indexed_oam_entry_t), sort_compare);
+
+  // Copy the sorted entries to the scan results
+  for (uint8_t i = 0; i < entry_count; i++)
+  {
+    scan_results->sprite_attributes[scan_results->sprite_count++] = entries[i].entry;
+  }
 
   return STATUS_OK;
 }
@@ -86,7 +106,13 @@ static inline bool scanline_intersects_sprite(oam_entry_t *oam_entry, uint8_t li
 
 static int sort_compare(const void *value_1, const void *value_2)
 {
-  const oam_entry_t *entry_1 = (oam_entry_t *)value_1;
-  const oam_entry_t *entry_2 = (oam_entry_t *)value_2;
-  return (entry_1->x_pos > entry_2->x_pos) - (entry_1->x_pos < entry_2->x_pos);
+  uint8_t const x_pos_1 = ((indexed_oam_entry_t *)value_1)->entry.x_pos;
+  uint8_t const x_pos_2 = ((indexed_oam_entry_t *)value_2)->entry.x_pos;
+  uint8_t const index_1 = ((indexed_oam_entry_t *)value_1)->index;
+  uint8_t const index_2 = ((indexed_oam_entry_t *)value_2)->index;
+
+  int const index_ordering = (index_1 > index_2) - (index_1 < index_2);
+  int const x_pos_ordering = (x_pos_1 > x_pos_2) - (x_pos_1 < x_pos_2);
+
+  return (x_pos_1 == x_pos_2) ? index_ordering : x_pos_ordering;
 }
