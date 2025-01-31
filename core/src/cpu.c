@@ -634,7 +634,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
     status = sync_cycles(state, 1);
     RETURN_STATUS_IF_NOT_OK(status);
 
-    if (state->interrupt.regs.irf) // TODO: create interface (?)
+    if (has_pending_interrupts(&state->interrupt))
     {
       state->run_mode = RUN_MODE_NORMAL;
     }
@@ -645,7 +645,7 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
     return STATUS_ERR_GENERIC;
   }
 
-  if (state->interrupt.regs.ime) // TODO: create interface (?)
+  if (interrupt_globally_enabled(&state->interrupt))
   {
     status = service_interrupt(&state->interrupt);
     RETURN_STATUS_IF_NOT_OK(status);
@@ -655,7 +655,8 @@ status_code_t cpu_emulation_cycle(cpu_state_t *const state)
 
   if (state->next_ime_flag)
   {
-    state->interrupt.regs.ime = 1; // TODO: create interface (?)
+    status = global_interrupt_enable(&state->interrupt, true);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
 
   return STATUS_OK;
@@ -1597,15 +1598,17 @@ static status_code_t op_DAA(cpu_state_t *const state, inst_operands_t *const __a
 
 static status_code_t op_RETI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
-  state->interrupt.regs.ime = 1;
+  status_code_t status = STATUS_OK;
+  status = global_interrupt_enable(&state->interrupt, true);
+  RETURN_STATUS_IF_NOT_OK(status);
+
   return pop_reg_16(state, &state->registers.pc);
 }
 
 static status_code_t op_DI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
 {
-  state->interrupt.regs.ime = 0;
   state->next_ime_flag = 0;
-  return STATUS_OK;
+  return global_interrupt_enable(&state->interrupt, false);
 }
 
 static status_code_t op_EI(cpu_state_t *const state, inst_operands_t *const __attribute__((unused)) operands)
