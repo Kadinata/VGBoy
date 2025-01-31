@@ -6,6 +6,12 @@
 #include "bus_interface.h"
 #include "interrupt.h"
 
+typedef enum
+{
+  TMR_TAC_CLK_SEL = 0x3,
+  TMR_TAC_ENABLE = (1 << 2),
+} timer_reg_tac_t;
+
 typedef struct
 {
   uint16_t div;
