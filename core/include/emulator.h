@@ -36,10 +36,12 @@ typedef struct
   joypad_handle_t joypad;
   callback_t cycle_sync_callback;
   emulator_state_t state;
+  uint32_t prev_frame_count;
 } emulator_t;
 
 status_code_t emulator_init(emulator_t *const emulator);
 status_code_t emulator_run(emulator_t *const emulator);
+status_code_t emulator_run_frame(emulator_t *const emulator);
 void emulator_stop(emulator_t *const emulator);
 status_code_t emulator_cleanup(emulator_t *const emulator);
 

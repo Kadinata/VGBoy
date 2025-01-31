@@ -38,6 +38,7 @@ status_code_t emulator_init(emulator_t *const emulator)
   emulator->io.bus_interface.offset = 0xFF00;
   emulator->cpu_state.interrupt.bus_interface.offset = 0xFF00;
   emulator->state = EMU_MODE_RUNNING;
+  emulator->prev_frame_count = emulator->ppu.current_frame;
 
   status = module_init(emulator);
   RETURN_STATUS_IF_NOT_OK(status);
@@ -56,7 +57,7 @@ status_code_t emulator_run(emulator_t *const emulator)
 
   while (emulator->state == EMU_MODE_RUNNING)
   {
-    status = cpu_emulation_cycle(&emulator->cpu_state);
+    status = emulator_run_frame(emulator);
     if (status != STATUS_OK)
     {
       Log_E("CPU emulation cycle encountered an error: %d", status);
@@ -109,6 +110,25 @@ static status_code_t sync_callback_handler(void *const ctx, const void *arg)
   }
 
   return status;
+}
+
+status_code_t emulator_run_frame(emulator_t *const emulator)
+{
+  status_code_t status = STATUS_OK;
+
+  while(emulator->prev_frame_count == emulator->ppu.current_frame)
+  {
+    status = cpu_emulation_cycle(&emulator->cpu_state);
+    RETURN_STATUS_IF_NOT_OK(status);
+
+    if (emulator->cpu_state.run_mode == RUN_MODE_STOPPED)
+    {
+      break;
+    }
+  }
+
+  emulator->prev_frame_count = emulator->ppu.current_frame;
+  return STATUS_OK;
 }
 
 static inline status_code_t module_init(emulator_t *const emulator)
