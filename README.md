@@ -5,6 +5,16 @@
 VGBoy (Virtual Game Boy): A Game Boy (DMG) emulator written fully in C, with SDL2 frontend to manage graphics and audio.
 This is a perrsonal project that served as a learning opportunity for me to get into emulator development.
 
+<div align="center">
+  <img src="docs/images/Pokemon.png" width=250/>
+  <img src="docs/images/Zelda.png" width=250/>
+  <img src="docs/images/Dr_Mario.jpg" width=250/>
+</div>
+<div align="center">
+  <img src="docs/images/Contra.png" width=250/>
+  <img src="docs/images/F1_Race.jpg" width=250/>
+</div>
+
 ## Features
 
 - Game Boy (DMG) emulation support
@@ -43,17 +53,17 @@ make clean
 make
 ```
 
+## Running the Emulator
+
+```sh
+./VGBoy path/to/game_rom.gb
+```
+
 ## Unit Testing
 
 ```sh
 ./run_test.sh  # Runs all tests
 ./run_test.sh path/to/test_file.c # Runs a single test file
-```
-
-## Running the Emulator
-
-```sh
-./VGBoy path/to/game_rom.gb
 ```
 
 ### Key Mapping
@@ -67,7 +77,7 @@ make
 | `K` | `B` |
 | `L` | `A` |
 | `ENTER` | `START` |
-| `BACKSPACE` | `SELECT` | 
+| `BACKSPACE` | `SELECT` |
 
 # Additional Resources
 
