@@ -22,7 +22,7 @@ typedef enum
   RUN_MODE_NORMAL,
   RUN_MODE_STOPPED,
   RUN_MODE_HALTED,
-} cpu_runmode_t;
+} cpu_run_mode_t;
 
 /**
  * CPU register definitions. There are 8 8-bit data registers:
@@ -69,7 +69,7 @@ typedef struct cpu_state_s
 {
   registers_t registers;
   uint32_t m_cycles;
-  cpu_runmode_t run_mode;
+  cpu_run_mode_t run_mode;
   uint8_t next_ime_flag;
   interrupt_handle_t interrupt;
   callback_t interrupt_callback;

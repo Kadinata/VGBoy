@@ -13,23 +13,9 @@
 
 void *cpu_run(void *p)
 {
-  status_code_t status;
   emulator_t *const emulator = (emulator_t *)p;
 
-  while (emulator->running)
-  {
-    status = cpu_emulation_cycle(&emulator->cpu_state);
-    if (status != STATUS_OK)
-    {
-      Log_E("CPU emulation cycle encountered an error: %d", status);
-      break;
-    }
-    else if (emulator->cpu_state.run_mode == RUN_MODE_STOPPED)
-    {
-      Log_I("CPU Stopped!");
-      break;
-    }
-  }
+  emulator_run(emulator);
 
   return 0;
 }
@@ -103,7 +89,7 @@ int main(int __attribute__((unused)) argc, char **argv)
 
   Log_I("Stopping");
 
-  emulator.running = false;
+  emulator_stop(&emulator);
   pthread_join(t1, NULL);
 
   cleanup(&emulator);

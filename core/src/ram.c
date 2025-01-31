@@ -1,13 +1,15 @@
 #include "ram.h"
 
 #include <stdint.h>
+#include <stdbool.h>
+
 #include "bus_interface.h"
 #include "status_code.h"
 
 static status_code_t ram_read(void *const resource, uint16_t const address, uint8_t *const data);
 static status_code_t ram_write(void *const resource, uint16_t const address, uint8_t const data);
 
-static inline uint8_t address_in_range(uint16_t address, uint16_t offset, uint16_t size)
+static inline bool address_in_range(uint16_t address, uint16_t offset, uint16_t size)
 {
   return ((address >= offset) && (address < (offset + size)));
 }
@@ -29,7 +31,6 @@ static status_code_t ram_read(void *const resource, uint16_t const address, uint
   uint16_t effective_address;
   ram_handle_t *const ram_handle = (ram_handle_t *)resource;
 
-  // TODO: check for address bound
   if (address_in_range(address, ram_handle->wram.offset, WRAM_SIZE))
   {
     effective_address = address - ram_handle->wram.offset;
@@ -60,8 +61,6 @@ static status_code_t ram_write(void *const resource, uint16_t const address, uin
   ram_handle_t *const ram_handle = (ram_handle_t *)resource;
 
   uint16_t effective_address;
-
-  // TODO: check for address bound
 
   if (address_in_range(address, ram_handle->wram.offset, WRAM_SIZE))
   {

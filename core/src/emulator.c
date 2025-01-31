@@ -20,6 +20,78 @@
 #include "callback.h"
 #include "logging.h"
 
+static status_code_t sync_callback_handler(void *const ctx, const void *arg);
+static inline status_code_t module_init(emulator_t *const emulator);
+static inline status_code_t configure_data_bus(emulator_t *const emulator);
+
+status_code_t emulator_init(emulator_t *const emulator)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
+
+  status_code_t status = STATUS_OK;
+
+  emulator->ram.wram.offset = 0xC000;
+  emulator->ram.vram.offset = 0x8000;
+  emulator->ram.hram.offset = 0xFF80;
+  emulator->ram.bus_interface.offset = 0x0000;
+  emulator->ppu.oam.bus_interface.offset = 0xFE00;
+  emulator->io.bus_interface.offset = 0xFF00;
+  emulator->cpu_state.interrupt.bus_interface.offset = 0xFF00;
+  emulator->state = EMU_MODE_RUNNING;
+
+  status = module_init(emulator);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = configure_data_bus(emulator);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
+}
+
+status_code_t emulator_load_cartridge(emulator_t *const emulator, const char *file)
+{
+  return mbc_load_rom(&emulator->mbc, file);
+}
+
+status_code_t emulator_run(emulator_t *const emulator)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
+
+  status_code_t status = STATUS_OK;
+
+  while (emulator->state == EMU_MODE_RUNNING)
+  {
+    status = cpu_emulation_cycle(&emulator->cpu_state);
+    if (status != STATUS_OK)
+    {
+      Log_E("CPU emulation cycle encountered an error: %d", status);
+      break;
+    }
+    else if (emulator->cpu_state.run_mode == RUN_MODE_STOPPED)
+    {
+      Log_I("CPU Stopped!");
+      break;
+    }
+  }
+
+  return status;
+}
+
+void emulator_stop(emulator_t *const emulator)
+{
+  if (emulator)
+  {
+    emulator->state = EMU_MODE_STOPPED;
+  }
+}
+
+status_code_t emulator_cleanup(emulator_t *const emulator)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
+
+  return mbc_cleanup(&emulator->mbc);
+}
+
 static status_code_t sync_callback_handler(void *const ctx, const void *arg)
 {
   emulator_t *const emulator = (emulator_t *)ctx;
@@ -135,40 +207,4 @@ static inline status_code_t configure_data_bus(emulator_t *const emulator)
   RETURN_STATUS_IF_NOT_OK(status);
 
   return STATUS_OK;
-}
-
-status_code_t emulator_init(emulator_t *const emulator)
-{
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
-
-  status_code_t status = STATUS_OK;
-
-  emulator->ram.wram.offset = 0xC000;
-  emulator->ram.vram.offset = 0x8000;
-  emulator->ram.hram.offset = 0xFF80;
-  emulator->ram.bus_interface.offset = 0x0000;
-  emulator->ppu.oam.bus_interface.offset = 0xFE00;
-  emulator->io.bus_interface.offset = 0xFF00;
-  emulator->cpu_state.interrupt.bus_interface.offset = 0xFF00;
-  emulator->running = true;
-
-  status = module_init(emulator);
-  RETURN_STATUS_IF_NOT_OK(status);
-
-  status = configure_data_bus(emulator);
-  RETURN_STATUS_IF_NOT_OK(status);
-
-  return STATUS_OK;
-}
-
-status_code_t emulator_load_cartridge(emulator_t *const emulator, const char *file)
-{
-  return mbc_load_rom(&emulator->mbc, file);
-}
-
-status_code_t emulator_cleanup(emulator_t *const emulator)
-{
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
-
-  return mbc_cleanup(&emulator->mbc);
 }
