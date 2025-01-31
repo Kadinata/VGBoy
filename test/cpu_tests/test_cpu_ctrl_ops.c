@@ -15,6 +15,7 @@ TEST_FILE("cpu.c")
 void setUp(void)
 {
   serial_check_Ignore();
+  interrupt_globally_enabled_IgnoreAndReturn(false);
 }
 
 void tearDown(void)
