@@ -38,14 +38,13 @@ status_code_t mbc_init(mbc_handle_t *const mbc)
   return STATUS_OK;
 }
 
-status_code_t mbc_load_rom(mbc_handle_t *const mbc, const char *file)
+status_code_t mbc_load_rom(mbc_handle_t *const mbc, uint8_t *const rom_data, const size_t size)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(mbc);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(file);
 
   status_code_t status = STATUS_OK;
 
-  status = rom_load(&mbc->rom.content, file);
+  status = rom_load(&mbc->rom.content, rom_data, size);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = mbc_init_ext_ram(mbc);
@@ -103,6 +102,16 @@ status_code_t mbc_load_rom(mbc_handle_t *const mbc, const char *file)
 
   status = mbc_load_saved_game(mbc);
   RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
+}
+
+status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, save_game_callback_fn const save_game, save_game_callback_fn const load_game)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(mbc);
+
+  mbc->callbacks.save_game = save_game;
+  mbc->callbacks.load_game = load_game;
 
   return STATUS_OK;
 }
@@ -219,59 +228,26 @@ static inline status_code_t mbc_switch_rom_bank(mbc_handle_t *const mbc, uint8_t
 
 status_code_t mbc_load_saved_game(mbc_handle_t *const mbc)
 {
-  /** TODO: Export to different module */
   VERIFY_PTR_RETURN_ERROR_IF_NULL(mbc);
 
-  if (!mbc->batt.present)
+  if (!mbc->batt.present || !mbc->callbacks.load_game)
   {
     return STATUS_OK;
   }
 
-  char filename[512];
-
-  snprintf(filename, sizeof(filename), "%s.gbsav", mbc->rom.content.rom_file_name);
-
-  FILE *fp = fopen(filename, "rb");
-
-  if (fp == NULL)
-  {
-    Log_I("No saved game found");
-    return STATUS_OK;
-  }
-
-  fread(mbc->ext_ram.active_bank, 1, 0x2000, fp);
-  fclose(fp);
-
-  return STATUS_OK;
+  return mbc->callbacks.load_game(mbc->ext_ram.active_bank, 0x2000);
 }
 
 status_code_t mbc_save_game(mbc_handle_t *const mbc)
 {
-  /** TODO: Export to different module */
   VERIFY_PTR_RETURN_ERROR_IF_NULL(mbc);
 
-  if (!mbc->batt.present || !mbc->batt.has_unsaved_data)
+  if (!mbc->batt.present || !mbc->batt.has_unsaved_data || !mbc->callbacks.save_game)
   {
     return STATUS_OK;
   }
 
-  char filename[512];
-
-  snprintf(filename, sizeof(filename), "%s.gbsav", mbc->rom.content.rom_file_name);
-
-  FILE *fp = fopen(filename, "wb");
-
-  if (fp == NULL)
-  {
-    Log_E("Failed to open save file.");
-    return STATUS_ERR_GENERIC;
-  }
-
-  fwrite(mbc->ext_ram.active_bank, 1, 0x2000, fp);
-  fclose(fp);
-
-  Log_I("Game state saved");
-  return STATUS_OK;
+  return mbc->callbacks.save_game(mbc->ext_ram.active_bank, 0x2000);
 }
 
 static status_code_t mbc_read(void *const resource, uint16_t address, uint8_t *const data)

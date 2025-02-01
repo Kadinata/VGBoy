@@ -13,85 +13,60 @@
 #define ROM_HEADER_ADDR (0x100)
 #define ROM_SIZE_KB(rom_size) (32 * (1 << rom_size))
 
-static status_code_t verify_header_checksum(rom_handle_t *const handle);
+static inline status_code_t verify_header_checksum(rom_data_t *const handle);
 
-status_code_t rom_load(rom_handle_t *const handle, const char *file)
+status_code_t rom_load(rom_data_t *const rom, uint8_t *const rom_data, const size_t size)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(file);
-  VERIFY_COND_RETURN_STATUS_IF_TRUE(handle->data != NULL, STATUS_ERR_ALREADY_INITIALIZED);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(rom);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(rom_data);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(rom->data != NULL, STATUS_ERR_ALREADY_INITIALIZED);
 
-  Log_I("Loading ROM file: %s", file);
-
-  FILE *fp = fopen(file, "rb");
-
-  if (fp == NULL)
+  if (size < 0x14F)
   {
-    Log_E("Failed to open file");
-    return STATUS_ERR_FILE_NOT_FOUND;
+    Log_E("ROM data size is too small! (%zu bytes)", size);
+    return STATUS_ERR_INVALID_ARG;
   }
 
-  struct stat st;
-  stat(file, &st);
-  size_t file_size = st.st_size;
-
-  Log_I("ROM file loaded successfully. Allocating %zu bytes for ROM contents", file_size);
-
-  handle->data = malloc(file_size);
-
-  if (handle->data == NULL)
-  {
-    Log_E("Failed to allocate memory for ROM data");
-    return STATUS_ERR_NO_MEMORY;
-  }
-
-  size_t bytes_read = fread(handle->data, 1, file_size, fp);
-
-  fclose(fp);
-
-  Log_I("Bytes read: %zu; bytes allocated: %zu", bytes_read, file_size);
-
-  handle->header = (rom_header_t *)&handle->data[ROM_HEADER_ADDR];
+  rom->size = size;
+  rom->data = rom_data;
+  rom->header = (rom_header_t *)&rom->data[ROM_HEADER_ADDR];
 
   Log_I("ROM Metadata:");
-  Log_I("- Title:        %s", handle->header->title);
-  Log_I("- Type:         0x%02X", handle->header->cartridge_type);
-  Log_I("- ROM size:     %u KiB", ROM_SIZE_KB(handle->header->rom_size));
-  Log_I("- RAM size:     %u", handle->header->ram_size);
-  Log_I("- License code: 0x%02X", handle->header->new_license_code);
-  Log_I("- ROM version:  0x%02X", handle->header->mask_rom_version);
+  Log_I("- Title:        %s", rom->header->title);
+  Log_I("- Type:         0x%02X", rom->header->cartridge_type);
+  Log_I("- ROM size:     %u KiB", ROM_SIZE_KB(rom->header->rom_size));
+  Log_I("- RAM size:     %u", rom->header->ram_size);
+  Log_I("- License code: 0x%02X", rom->header->new_license_code);
+  Log_I("- ROM version:  0x%02X", rom->header->mask_rom_version);
 
-  snprintf(handle->rom_file_name, sizeof(handle->rom_file_name), "%s", file);
-
-  return verify_header_checksum(handle);
+  return verify_header_checksum(rom);
 }
 
-status_code_t rom_unload(rom_handle_t *const handle)
+status_code_t rom_unload(rom_data_t *const rom)
 {
-  VERIFY_PTR_RETURN_ERROR_IF_NULL(handle);
-  VERIFY_PTR_RETURN_STATUS_IF_NULL(handle->data, STATUS_ERR_ALREADY_FREED);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(rom);
+  VERIFY_PTR_RETURN_STATUS_IF_NULL(rom->data, STATUS_ERR_ALREADY_FREED);
 
-  free(handle->data);
-
-  handle->data = NULL;
-  handle->header = NULL;
+  rom->data = NULL;
+  rom->header = NULL;
+  rom->size = 0;
 
   Log_I("ROM unloaded successfully");
   return STATUS_OK;
 }
 
-static status_code_t verify_header_checksum(rom_handle_t *const handle)
+static status_code_t verify_header_checksum(rom_data_t *const rom)
 {
   uint8_t checksum = 0;
 
   for (uint16_t address = 0x134; address <= 0x14C; address++)
   {
-    checksum = checksum - handle->data[address] - 1;
+    checksum = checksum - rom->data[address] - 1;
   }
 
-  Log_I("ROM header checksum: 0x%02X", handle->header->header_checksum);
+  Log_I("ROM header checksum: 0x%02X", rom->header->header_checksum);
 
-  if (checksum != handle->header->header_checksum)
+  if (checksum != rom->header->header_checksum)
   {
     Log_E("ROM header checksum check failed (0x%02X)", checksum);
     return STATUS_ERR_CHECKSUM_FAILURE;

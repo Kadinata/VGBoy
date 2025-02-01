@@ -10,6 +10,8 @@
 
 #define MAX_RAM_BANKS (16)
 
+typedef status_code_t (*save_game_callback_fn)(uint8_t *const data, size_t const size);
+
 typedef enum
 {
   MBC_EXT_RAM_SIZE_NO_RAM = 0,
@@ -31,7 +33,7 @@ typedef struct
   uint16_t num_banks;
   uint8_t *active_switchable_bank;
   uint16_t active_bank_num;
-  rom_handle_t content;
+  rom_data_t content;
   bus_interface_t bus_interface;
 } mbc_rom_t;
 
@@ -53,15 +55,23 @@ typedef struct
 
 typedef struct
 {
+  save_game_callback_fn save_game;
+  save_game_callback_fn load_game;
+} mbc_callbacks_t;
+
+typedef struct
+{
   mbc_rom_t rom;
   mbc_ext_ram_t ext_ram;
   mbc_battery_t batt;
   banking_mode_t banking_mode;
   bus_interface_t bus_interface;
+  mbc_callbacks_t callbacks;
 } mbc_handle_t;
 
 status_code_t mbc_init(mbc_handle_t *const mbc);
-status_code_t mbc_load_rom(mbc_handle_t *const mbc, const char *file);
+status_code_t mbc_load_rom(mbc_handle_t *const mbc, uint8_t *const rom_data, const size_t size);
+status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, save_game_callback_fn const save_game, save_game_callback_fn const load_game);
 status_code_t mbc_cleanup(mbc_handle_t *const mbc);
 status_code_t mbc_save_game(mbc_handle_t *const mbc);
 status_code_t mbc_load_saved_game(mbc_handle_t *const mbc);

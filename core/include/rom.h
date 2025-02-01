@@ -69,10 +69,10 @@ typedef struct
 /** */
 typedef struct
 {
-  char rom_file_name[512];
   rom_header_t *header;
   uint8_t *data;
-} rom_handle_t;
+  size_t size;
+} rom_data_t;
 
 /**
  * Open a ROM file and load its contents to the provided ROM handle.
@@ -83,13 +83,14 @@ typedef struct
  * @param file - Path to the ROM file
  * @return STATUS_OK if no error, otherwise appropriate error code.
  */
-status_code_t rom_load(rom_handle_t *const handle, const char *file);
+// status_code_t rom_load(rom_handle_t *const handle, const char *file);
+status_code_t rom_load(rom_data_t *const rom, uint8_t *const rom_data, const size_t size);
 
 /**
  * Deallocate resources used for loaded ROM contents.
  * @param handle - Pointer to a ROM handle to free
  * @return STATUS_OK if no error, otherwise appropriate error code.
  */
-status_code_t rom_unload(rom_handle_t *const handle);
+status_code_t rom_unload(rom_data_t *const rom);
 
 #endif /* __DMG_ROM_H__ */
