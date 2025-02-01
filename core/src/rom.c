@@ -1,10 +1,6 @@
 #include "rom.h"
 
-#include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 
 #include "bus_interface.h"
 #include "logging.h"
