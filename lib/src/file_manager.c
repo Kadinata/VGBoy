@@ -81,6 +81,7 @@ status_code_t unload_cartridge(mbc_handle_t *const mbc)
   if (cartridge_handle.data)
   {
     free(cartridge_handle.data);
+    cartridge_handle.data = NULL;
   }
 
   return mbc_cleanup(mbc);
