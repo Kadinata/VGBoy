@@ -5,7 +5,7 @@
 
 #include "callback.h"
 #include "joypad.h"
-#include "save_state.h"
+#include "snapshot.h"
 #include "status_code.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
@@ -122,11 +122,11 @@ static status_code_t handle_save_state_requests(SDL_Event event)
   }
   else if (event.key.keysym.mod & KMOD_GUI)
   {
-    status = request_save_state(slot_num, MODE_SAVE_STATE);
+    status = request_snapshot(slot_num, MODE_SAVE_SNAPSHOT);
   }
   else if (event.key.keysym.mod & KMOD_SHIFT)
   {
-    status = request_save_state(slot_num, MODE_LOAD_STATE);
+    status = request_snapshot(slot_num, MODE_LOAD_SNAPSHOT);
   }
 
   return status;
