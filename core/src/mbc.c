@@ -1,6 +1,7 @@
 #include "mbc.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,7 +24,7 @@ static status_code_t mbc_2_write(void *const resource, uint16_t address, uint8_t
 static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t const data);
 
-static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num);
+static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num, bool save_game);
 static inline status_code_t mbc_switch_rom_bank(mbc_handle_t *const mbc, uint8_t rom_bank_num);
 
 status_code_t mbc_init(mbc_handle_t *const mbc)
@@ -201,14 +202,17 @@ static status_code_t mbc_init_battery(mbc_handle_t *const mbc)
   return STATUS_OK;
 }
 
-static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num)
+static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num, bool save_game)
 {
   VERIFY_COND_RETURN_STATUS_IF_TRUE(ram_bank_num >= mbc->ext_ram.num_banks, STATUS_ERR_INVALID_ARG);
 
   status_code_t status = STATUS_OK;
 
-  status = mbc_save_game(mbc);
-  RETURN_STATUS_IF_NOT_OK(status);
+  if (save_game)
+  {
+    status = mbc_save_game(mbc);
+    RETURN_STATUS_IF_NOT_OK(status);
+  }
 
   mbc->ext_ram.active_bank_num = ram_bank_num;
   mbc->ext_ram.active_bank = mbc->ext_ram.banks[ram_bank_num];
@@ -248,6 +252,21 @@ status_code_t mbc_save_game(mbc_handle_t *const mbc)
   }
 
   return mbc->callbacks.save_game(mbc->ext_ram.active_bank, 0x2000);
+}
+
+status_code_t mbc_reload_banks(mbc_handle_t *const mbc)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(mbc);
+
+  status_code_t status = STATUS_OK;
+
+  status = mbc_switch_ext_ram_bank(mbc, mbc->ext_ram.active_bank_num, false);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = mbc_switch_rom_bank(mbc, mbc->rom.active_bank_num);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  return STATUS_OK;
 }
 
 static status_code_t mbc_read(void *const resource, uint16_t address, uint8_t *const data)
@@ -331,7 +350,7 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
     /** 0x4000 - 0x5FFF: RAM bank number or upper bits of ROM bank number (Write only) */
     if (mbc->ext_ram.num_banks == MBC_EXT_RAM_SIZE_32K)
     {
-      status = mbc_switch_ext_ram_bank(mbc, data & 0x3);
+      status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
       RETURN_STATUS_IF_NOT_OK(status);
     }
     else if (mbc->rom.num_banks > 32)
@@ -349,7 +368,7 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
     {
       if (mbc->ext_ram.num_banks == MBC_EXT_RAM_SIZE_32K)
       {
-        status = mbc_switch_ext_ram_bank(mbc, data & 0x3);
+        status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
         RETURN_STATUS_IF_NOT_OK(status);
       }
 
@@ -413,7 +432,7 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
      */
     if ((data >= 0x00) && (data <= 0x03))
     {
-      status = mbc_switch_ext_ram_bank(mbc, data & 0x3);
+      status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
       RETURN_STATUS_IF_NOT_OK(status);
     }
     else if ((data >= 0x08) && (data <= 0x0C))
@@ -464,7 +483,7 @@ static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t
   else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
   {
     /** 0x4000 - 0x5FFF: RAM bank number (Write only) */
-    status = mbc_switch_ext_ram_bank(mbc, data & 0xF);
+    status = mbc_switch_ext_ram_bank(mbc, data & 0xF, true);
     RETURN_STATUS_IF_NOT_OK(status);
   }
   else if ((address >= 0x6000) && (address < 0x8000))

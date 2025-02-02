@@ -75,5 +75,6 @@ status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, save_game_callback
 status_code_t mbc_cleanup(mbc_handle_t *const mbc);
 status_code_t mbc_save_game(mbc_handle_t *const mbc);
 status_code_t mbc_load_saved_game(mbc_handle_t *const mbc);
+status_code_t mbc_reload_banks(mbc_handle_t *const mbc);
 
 #endif /* __DMG_MBC_H__ */
