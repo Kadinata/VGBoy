@@ -9,6 +9,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/fps_sync.c
   src/key_input.c
   src/main_window.c
+  src/save_state.c
   src/tile_debug_window.c
   src/window_manager.c
 )
