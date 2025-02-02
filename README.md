@@ -22,12 +22,12 @@ This is a perrsonal project that served as a learning opportunity for me to get 
 - Battery save
 - PPU Rendering with pixel pipeline
 - Audio emulation
+- Game state snapshot / rewind feature
 
 ## In the Works
 
 - RTC Support
 - MBC6, MBC7, HuC-1 ROM support
-- Save state / rewind feature
 - Higher timing accuracy
 
 # Compilation
@@ -68,6 +68,8 @@ make
 
 ### Key Mapping
 
+#### Game Boy Keys
+
 | Keyboard | Game Boy |
 | :--- | :--- |
 | `W` | `UP` |
@@ -78,6 +80,13 @@ make
 | `L` | `A` |
 | `ENTER` | `START` |
 | `BACKSPACE` | `SELECT` |
+
+#### Utility Keys
+
+| Keys | Function |
+| :--- | :--- |
+|`CMD` + `0...9` | Snapshot game state and save it to slot 0 ... 9 |
+|`SHIFT` + `0...9` | Load snapshot from slot 0 ... 9|
 
 # Additional Resources
 
