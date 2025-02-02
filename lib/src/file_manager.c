@@ -92,7 +92,7 @@ static status_code_t save_game(uint8_t *const game_data, const size_t size)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(game_data);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
 
-  char filename[512];
+  char filename[530];
 
   snprintf(filename, sizeof(filename), "%s.gbsav", cartridge_handle.filename);
 
@@ -104,7 +104,7 @@ static status_code_t save_game(uint8_t *const game_data, const size_t size)
     return STATUS_ERR_GENERIC;
   }
 
-  fwrite(game_data, 1, 0x2000, fp);
+  fwrite(game_data, 1, size, fp);
   fclose(fp);
 
   Log_I("Game state saved");
@@ -116,7 +116,7 @@ static status_code_t load_game(uint8_t *const game_data, const size_t size)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(game_data);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
 
-  char filename[512];
+  char filename[530];
 
   snprintf(filename, sizeof(filename), "%s.gbsav", cartridge_handle.filename);
 
@@ -131,5 +131,53 @@ static status_code_t load_game(uint8_t *const game_data, const size_t size)
   fread(game_data, 1, size, fp);
   fclose(fp);
 
+  return STATUS_OK;
+}
+
+status_code_t save_snapshot_file(void *const data, size_t const size, uint8_t const slot_num)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
+
+  char filename[530];
+
+  snprintf(filename, sizeof(filename), "%s.%u.gbstate", cartridge_handle.filename, slot_num);
+
+  FILE *fp = fopen(filename, "wb");
+
+  if (fp == NULL)
+  {
+    Log_E("Failed to open state snapshot file for slot #%u.", slot_num);
+    return STATUS_ERR_GENERIC;
+  }
+
+  fwrite(data, 1, size, fp);
+  fclose(fp);
+
+  Log_I("Snapshot state saved to slot #%u", slot_num);
+  return STATUS_OK;
+}
+
+status_code_t load_snapshot_file(void *const data, size_t const size, uint8_t const slot_num)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
+
+  char filename[530];
+
+  snprintf(filename, sizeof(filename), "%s.%u.gbstate", cartridge_handle.filename, slot_num);
+
+  FILE *fp = fopen(filename, "rb");
+
+  if (fp == NULL)
+  {
+    Log_I("No state snapshot file found for slot# %u.", slot_num);
+    return STATUS_ERR_FILE_NOT_FOUND;
+  }
+
+  fread(data, 1, size, fp);
+  fclose(fp);
+
+  Log_I("Snapshot state loaded from slot #%u", slot_num);
   return STATUS_OK;
 }

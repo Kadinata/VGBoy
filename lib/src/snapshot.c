@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "emulator.h"
+#include "file_manager.h"
 #include "logging.h"
 #include "status_code.h"
 
@@ -110,7 +111,6 @@ typedef struct
   snapshot_request_t load;
 } snapshot_requests_t;
 
-static emulator_snapshot_t snapshot = {0};
 static snapshot_requests_t snapshot_requests;
 
 static status_code_t save_snapshot(emulator_t *const emulator, const uint8_t slot_num);
@@ -162,8 +162,14 @@ status_code_t handle_snapshot_request(emulator_t *const emulator)
 
 static status_code_t save_snapshot(emulator_t *const emulator, const uint8_t slot_num)
 {
+  /**
+   * TODO: While this works, it's pretty messy and needs a cleaner & more maintainable way
+   */
+
   VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(slot_num > 9, STATUS_ERR_INVALID_ARG);
+
+  emulator_snapshot_t snapshot = {0};
 
   /** Save APU states */
   memcpy(&snapshot.apu.ch1.registers, &emulator->apu.ch1.registers, sizeof(apu_pwm_registers_t));
@@ -201,12 +207,19 @@ static status_code_t save_snapshot(emulator_t *const emulator, const uint8_t slo
   memcpy(&snapshot.ppu.lcd, &emulator->ppu.lcd.registers, sizeof(lcd_registers_t));
   memcpy(&snapshot.ppu.oam_entries, &emulator->ppu.oam.entries, sizeof(emulator->ppu.oam.entries));
   memcpy(&snapshot.ppu.video_buffer, &emulator->ppu.video_buffer, sizeof(emulator->ppu.video_buffer));
-  memcpy(&snapshot.ppu.pxfifo.bg_fifo, &emulator->ppu.pxfifo.bg_fifo, sizeof(pxfifo_buffer_t));
   memcpy(&snapshot.ppu.pxfifo.counters, &emulator->ppu.pxfifo.counters, sizeof(pxfifo_counter_t));
   memcpy(&snapshot.ppu.pxfifo.pixel_fetcher, &emulator->ppu.pxfifo.pixel_fetcher, sizeof(pixel_fetcher_state_t));
   snapshot.ppu.pxfifo.fifo_state = emulator->ppu.pxfifo.fifo_state;
   snapshot.ppu.current_frame = emulator->ppu.current_frame;
   snapshot.ppu.line_ticks = emulator->ppu.line_ticks;
+
+  /** Save Pixel FIFO states */
+  memcpy(&snapshot.ppu.pxfifo.bg_fifo.storage, &emulator->ppu.pxfifo.bg_fifo.storage, sizeof(emulator->ppu.pxfifo.bg_fifo.storage));
+  snapshot.ppu.pxfifo.bg_fifo.buffer.capacity = emulator->ppu.pxfifo.bg_fifo.buffer.capacity;
+  snapshot.ppu.pxfifo.bg_fifo.buffer.read_ptr = emulator->ppu.pxfifo.bg_fifo.buffer.read_ptr;
+  snapshot.ppu.pxfifo.bg_fifo.buffer.write_ptr = emulator->ppu.pxfifo.bg_fifo.buffer.write_ptr;
+  snapshot.ppu.pxfifo.bg_fifo.buffer.item_size = emulator->ppu.pxfifo.bg_fifo.buffer.item_size;
+  snapshot.ppu.pxfifo.bg_fifo.buffer.status = emulator->ppu.pxfifo.bg_fifo.buffer.status;
 
   /* Save RAM states */
   memcpy(&snapshot.ram.wram, &emulator->ram.wram, sizeof(wram_t));
@@ -218,7 +231,7 @@ static status_code_t save_snapshot(emulator_t *const emulator, const uint8_t slo
 
   Log_I("State snapshot saved to slot %d", slot_num);
 
-  return STATUS_OK;
+  return save_snapshot_file(&snapshot, sizeof(emulator_snapshot_t), slot_num);
 }
 
 static status_code_t load_snapshot(emulator_t *const emulator, const uint8_t slot_num)
@@ -227,6 +240,14 @@ static status_code_t load_snapshot(emulator_t *const emulator, const uint8_t slo
   VERIFY_COND_RETURN_STATUS_IF_TRUE(slot_num > 9, STATUS_ERR_INVALID_ARG);
 
   status_code_t status = STATUS_OK;
+  emulator_snapshot_t snapshot = {0};
+
+  status = load_snapshot_file(&snapshot, sizeof(emulator_snapshot_t), slot_num);
+  if (status != STATUS_OK)
+  {
+    Log_E("Error opening snapshot file for slot #%d (%d)", slot_num, status);
+    return STATUS_OK;
+  }
 
   /** Load APU states */
   memcpy(&emulator->apu.ch1.registers, &snapshot.apu.ch1.registers, sizeof(apu_pwm_registers_t));
@@ -264,12 +285,19 @@ static status_code_t load_snapshot(emulator_t *const emulator, const uint8_t slo
   memcpy(&emulator->ppu.lcd.registers, &snapshot.ppu.lcd, sizeof(lcd_registers_t));
   memcpy(&emulator->ppu.oam.entries, &snapshot.ppu.oam_entries, sizeof(emulator->ppu.oam.entries));
   memcpy(&emulator->ppu.video_buffer, &snapshot.ppu.video_buffer, sizeof(emulator->ppu.video_buffer));
-  memcpy(&emulator->ppu.pxfifo.bg_fifo, &snapshot.ppu.pxfifo.bg_fifo, sizeof(pxfifo_buffer_t));
   memcpy(&emulator->ppu.pxfifo.counters, &snapshot.ppu.pxfifo.counters, sizeof(pxfifo_counter_t));
   memcpy(&emulator->ppu.pxfifo.pixel_fetcher, &snapshot.ppu.pxfifo.pixel_fetcher, sizeof(pixel_fetcher_state_t));
   emulator->ppu.pxfifo.fifo_state = snapshot.ppu.pxfifo.fifo_state;
   emulator->ppu.current_frame = snapshot.ppu.current_frame;
   emulator->ppu.line_ticks = snapshot.ppu.line_ticks;
+
+  /** Load Pixel FIFO states */
+  memcpy(&emulator->ppu.pxfifo.bg_fifo.storage, &snapshot.ppu.pxfifo.bg_fifo.storage, sizeof(emulator->ppu.pxfifo.bg_fifo.storage));
+  emulator->ppu.pxfifo.bg_fifo.buffer.capacity = snapshot.ppu.pxfifo.bg_fifo.buffer.capacity;
+  emulator->ppu.pxfifo.bg_fifo.buffer.read_ptr = snapshot.ppu.pxfifo.bg_fifo.buffer.read_ptr;
+  emulator->ppu.pxfifo.bg_fifo.buffer.write_ptr = snapshot.ppu.pxfifo.bg_fifo.buffer.write_ptr;
+  emulator->ppu.pxfifo.bg_fifo.buffer.item_size = snapshot.ppu.pxfifo.bg_fifo.buffer.item_size;
+  emulator->ppu.pxfifo.bg_fifo.buffer.status = snapshot.ppu.pxfifo.bg_fifo.buffer.status;
 
   /* Load RAM states */
   memcpy(&emulator->ram.wram, &snapshot.ram.wram, sizeof(wram_t));
