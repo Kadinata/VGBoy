@@ -97,6 +97,7 @@ typedef struct
   ppu_snapshot_t ppu;
   ram_snapshot_t ram;
   timer_registers_t tmr;
+  uint32_t prev_frame_count;
 } emulator_snapshot_t;
 
 typedef struct
@@ -170,6 +171,9 @@ static status_code_t save_snapshot(emulator_t *const emulator, const uint8_t slo
   VERIFY_COND_RETURN_STATUS_IF_TRUE(slot_num > 9, STATUS_ERR_INVALID_ARG);
 
   emulator_snapshot_t snapshot = {0};
+
+  /** Save emulator states */
+  snapshot.prev_frame_count = emulator->prev_frame_count;
 
   /** Save APU states */
   memcpy(&snapshot.apu.ch1.registers, &emulator->apu.ch1.registers, sizeof(apu_pwm_registers_t));
@@ -248,6 +252,9 @@ static status_code_t load_snapshot(emulator_t *const emulator, const uint8_t slo
     return STATUS_OK;
   }
   RETURN_STATUS_IF_NOT_OK(status);
+
+  /** Load emulator states */
+  emulator->prev_frame_count = snapshot.prev_frame_count;
 
   /** Load APU states */
   memcpy(&emulator->apu.ch1.registers, &snapshot.apu.ch1.registers, sizeof(apu_pwm_registers_t));

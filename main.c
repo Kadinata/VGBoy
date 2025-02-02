@@ -4,6 +4,7 @@
 #include "status_code.h"
 #include "cpu.h"
 #include "file_manager.h"
+#include "snapshot.h"
 #include "logging.h"
 #include "emulator.h"
 #include "audio.h"
@@ -17,8 +18,31 @@ void *cpu_run(void *p)
 {
   emulator_t *const emulator = (emulator_t *)p;
 
-  emulator_run(emulator);
+  status_code_t status = STATUS_OK;
 
+  while (emulator->state == EMU_MODE_RUNNING)
+  {
+    status = emulator_run_frame(emulator);
+    if (status != STATUS_OK)
+    {
+      Log_E("CPU emulation cycle encountered an error: %d", status);
+      break;
+    }
+    else if (emulator->cpu_state.run_mode == RUN_MODE_STOPPED)
+    {
+      Log_I("CPU Stopped!");
+      break;
+    }
+
+    status = handle_snapshot_request(emulator);
+    if (status != STATUS_OK)
+    {
+      Log_E("An error occurred while handling game state request: %d", status);
+      break;
+    }
+  }
+
+  emulator->state = EMU_MODE_STOPPED;
   return 0;
 }
 
@@ -97,7 +121,7 @@ int main(int __attribute__((unused)) argc, char **argv)
     return -1;
   }
 
-  while (1)
+  while (emulator.state == EMU_MODE_RUNNING)
   {
     usleep(1000);
     status = key_input_read();
