@@ -36,6 +36,7 @@ This is a perrsonal project that served as a learning opportunity for me to get 
 
 - [CMake](https://cmake.org/): Building
 - [Simple DirectMedia Layer (SDL) 2.0](https://wiki.libsdl.org/SDL2/FrontPage): Graphics, audio, and keyboard input
+- [ZLib](https://www.zlib.net/): File compression
 - [Ceedling](https://www.throwtheswitch.org/ceedling) + [gcovr](https://github.com/gcovr/gcovr): Unit testing
 
 ## Setup & Build

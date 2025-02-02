@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <zlib.h>
 
 #include "logging.h"
 #include "status_code.h"
@@ -17,8 +18,12 @@ typedef struct
   uint8_t *data;
 } cartridge_handle_t;
 
+static status_code_t save_file(const char *filename, void *const data, const size_t size);
+static status_code_t load_file(const char *filename, void *const data, const size_t size);
 static status_code_t save_game(uint8_t *const game_data, const size_t size);
 static status_code_t load_game(uint8_t *const game_data, const size_t size);
+
+static inline size_t get_file_size(const char *filename);
 
 static cartridge_handle_t cartridge_handle;
 
@@ -35,9 +40,7 @@ status_code_t load_cartridge(mbc_handle_t *const mbc, const char *file)
 
   Log_I("Loading ROM file: %s", file);
 
-  struct stat st;
-  stat(file, &st);
-  size_t file_size = st.st_size;
+  size_t file_size = get_file_size(file);
 
   FILE *fp = fopen(file, "rb");
 
@@ -87,25 +90,51 @@ status_code_t unload_cartridge(mbc_handle_t *const mbc)
   return mbc_cleanup(mbc);
 }
 
+static inline size_t get_file_size(const char *filename)
+{
+  struct stat st;
+  stat(filename, &st);
+  return st.st_size;
+}
+
+static status_code_t save_file(const char *filename, void *const data, const size_t size)
+{
+  FILE *fp = fopen(filename, "wb");
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(fp == NULL, STATUS_ERR_FILE_NOT_FOUND);
+
+  fwrite(data, 1, size, fp);
+  fclose(fp);
+
+  return STATUS_OK;
+}
+
+static status_code_t load_file(const char *filename, void *const data, const size_t size)
+{
+  FILE *fp = fopen(filename, "rb");
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(fp == NULL, STATUS_ERR_FILE_NOT_FOUND);
+
+  fread(data, 1, size, fp);
+  fclose(fp);
+
+  return STATUS_OK;
+}
+
 static status_code_t save_game(uint8_t *const game_data, const size_t size)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(game_data);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
 
+  status_code_t status = STATUS_OK;
   char filename[530];
 
   snprintf(filename, sizeof(filename), "%s.gbsav", cartridge_handle.filename);
 
-  FILE *fp = fopen(filename, "wb");
-
-  if (fp == NULL)
+  status = save_file(filename, game_data, size);
+  if (status != STATUS_OK)
   {
     Log_E("Failed to open save file.");
-    return STATUS_ERR_GENERIC;
+    return status;
   }
-
-  fwrite(game_data, 1, size, fp);
-  fclose(fp);
 
   Log_I("Game state saved");
   return STATUS_OK;
@@ -116,22 +145,19 @@ static status_code_t load_game(uint8_t *const game_data, const size_t size)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(game_data);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
 
+  status_code_t status = STATUS_OK;
   char filename[530];
 
   snprintf(filename, sizeof(filename), "%s.gbsav", cartridge_handle.filename);
 
-  FILE *fp = fopen(filename, "rb");
-
-  if (fp == NULL)
+  status = load_file(filename, game_data, size);
+  if (status == STATUS_ERR_FILE_NOT_FOUND)
   {
     Log_I("No saved game found");
     return STATUS_OK;
   }
 
-  fread(game_data, 1, size, fp);
-  fclose(fp);
-
-  return STATUS_OK;
+  return status;
 }
 
 status_code_t save_snapshot_file(void *const data, size_t const size, uint8_t const slot_num)
@@ -139,20 +165,36 @@ status_code_t save_snapshot_file(void *const data, size_t const size, uint8_t co
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
 
+  status_code_t status = STATUS_OK;
   char filename[530];
 
+  /** Compress data */
+  size_t compressed_size = compressBound(size);
+  uint8_t *const compressed_data = malloc(size);
+
+  if (compressed_data == NULL)
+  {
+    Log_E("Failed to allocate memory for compressed data while saving snapshot to slot %d", slot_num);
+    return STATUS_ERR_NO_MEMORY;
+  }
+
+  int z_status = compress(compressed_data, &compressed_size, data, size);
+  if (z_status != Z_OK)
+  {
+    Log_E("An error occurred while compressing snapshot data for slot %d (%d)", slot_num, z_status);
+    free(compressed_data);
+    return STATUS_ERR_GENERIC;
+  }
+
   snprintf(filename, sizeof(filename), "%s.%u.gbstate", cartridge_handle.filename, slot_num);
+  status = save_file(filename, compressed_data, compressed_size);
+  free(compressed_data);
 
-  FILE *fp = fopen(filename, "wb");
-
-  if (fp == NULL)
+  if (status != STATUS_OK)
   {
     Log_E("Failed to open state snapshot file for slot #%u.", slot_num);
     return STATUS_ERR_GENERIC;
   }
-
-  fwrite(data, 1, size, fp);
-  fclose(fp);
 
   Log_I("Snapshot state saved to slot #%u", slot_num);
   return STATUS_OK;
@@ -163,20 +205,48 @@ status_code_t load_snapshot_file(void *const data, size_t const size, uint8_t co
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(size <= 0, STATUS_ERR_INVALID_ARG);
 
+  status_code_t status = STATUS_OK;
   char filename[530];
 
   snprintf(filename, sizeof(filename), "%s.%u.gbstate", cartridge_handle.filename, slot_num);
 
-  FILE *fp = fopen(filename, "rb");
+  size_t file_size = get_file_size(filename);
 
-  if (fp == NULL)
+  if (file_size == 0)
   {
     Log_I("No state snapshot file found for slot# %u.", slot_num);
     return STATUS_ERR_FILE_NOT_FOUND;
   }
 
-  fread(data, 1, size, fp);
-  fclose(fp);
+  size_t uncompressed_size = size;
+  uint8_t *const compressed_data = malloc(file_size + 1);
+  if (compressed_data == NULL)
+  {
+    Log_E("Failed to allocate memory for compressed data while saving snapshot to slot %d", slot_num);
+    return STATUS_ERR_NO_MEMORY;
+  }
+
+  status = load_file(filename, compressed_data, file_size);
+  if (status != STATUS_OK)
+  {
+    Log_I("An error occurred while reading snapshot file for slot# %u (%d).", slot_num, status);
+    free(compressed_data);
+    return status;
+  }
+
+  int z_status = uncompress(data, &uncompressed_size, compressed_data, file_size);
+  free(compressed_data);
+
+  if (z_status != Z_OK)
+  {
+    Log_E("An error occurred while uncompressing snapshot data from slot %d (%d)", slot_num, z_status);
+    return STATUS_ERR_GENERIC;
+  }
+  if (uncompressed_size != size)
+  {
+    Log_E("Uncompressed data size doesn't match the expected size (%zu vs %zu)", uncompressed_size, size);
+    return STATUS_ERR_GENERIC;
+  }
 
   Log_I("Snapshot state loaded from slot #%u", slot_num);
   return STATUS_OK;

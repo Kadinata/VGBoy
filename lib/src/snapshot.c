@@ -243,11 +243,11 @@ static status_code_t load_snapshot(emulator_t *const emulator, const uint8_t slo
   emulator_snapshot_t snapshot = {0};
 
   status = load_snapshot_file(&snapshot, sizeof(emulator_snapshot_t), slot_num);
-  if (status != STATUS_OK)
+  if (status == STATUS_ERR_FILE_NOT_FOUND)
   {
-    Log_E("Error opening snapshot file for slot #%d (%d)", slot_num, status);
     return STATUS_OK;
   }
+  RETURN_STATUS_IF_NOT_OK(status);
 
   /** Load APU states */
   memcpy(&emulator->apu.ch1.registers, &snapshot.apu.ch1.registers, sizeof(apu_pwm_registers_t));

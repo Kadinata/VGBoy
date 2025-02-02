@@ -11,8 +11,12 @@ add_link_options(-pedantic -Wall -Wextra -Wno-gnu-statement-expression -fsanitiz
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS})
 
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
+
 add_executable(${PROJECT_NAME} main.c)
 target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${ZLIB_LIBRARIES})
 
 add_subdirectory(common)
 add_subdirectory(core)
