@@ -1,6 +1,7 @@
 #include "save_state.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "emulator.h"
@@ -97,10 +98,69 @@ typedef struct
   timer_registers_t tmr;
 } emulator_saved_state_t;
 
-static emulator_saved_state_t saved_state = {0};
-// static emulator_t saved_state;
+typedef struct
+{
+  bool requested;
+  uint8_t slot_num;
+} save_state_request_t;
 
-status_code_t save_game_state(emulator_t *const emulator, const uint8_t slot_num)
+typedef struct
+{
+  save_state_request_t save;
+  save_state_request_t load;
+} save_state_requests_t;
+
+static emulator_saved_state_t saved_state = {0};
+static save_state_requests_t save_state_requests;
+
+static status_code_t save_game_state(emulator_t *const emulator, const uint8_t slot_num);
+static status_code_t load_game_state(emulator_t *const emulator, const uint8_t slot_num);
+
+status_code_t request_save_state(const uint8_t slot_num, const game_state_mode_t mode)
+{
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(slot_num > 9, STATUS_ERR_INVALID_ARG);
+
+  switch (mode)
+  {
+  case MODE_SAVE_STATE:
+    save_state_requests.save.requested = true;
+    save_state_requests.save.slot_num = slot_num;
+    break;
+  case MODE_LOAD_STATE:
+    save_state_requests.load.requested = true;
+    save_state_requests.load.slot_num = slot_num;
+    break;
+  default:
+    break;
+  }
+
+  return STATUS_OK;
+}
+
+status_code_t handle_save_request(emulator_t *const emulator)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
+
+  status_code_t status = STATUS_OK;
+
+  if (save_state_requests.save.requested)
+  {
+    save_state_requests.save.requested = false;
+    status = save_game_state(emulator, save_state_requests.save.slot_num);
+    RETURN_STATUS_IF_NOT_OK(status);
+  }
+
+  if (save_state_requests.load.requested)
+  {
+    save_state_requests.load.requested = false;
+    status = load_game_state(emulator, save_state_requests.load.slot_num);
+    RETURN_STATUS_IF_NOT_OK(status);
+  }
+
+  return STATUS_OK;
+}
+
+static status_code_t save_game_state(emulator_t *const emulator, const uint8_t slot_num)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(slot_num > 9, STATUS_ERR_INVALID_ARG);
@@ -161,7 +221,7 @@ status_code_t save_game_state(emulator_t *const emulator, const uint8_t slot_num
   return STATUS_OK;
 }
 
-status_code_t load_game_state(emulator_t *const emulator, const uint8_t slot_num)
+static status_code_t load_game_state(emulator_t *const emulator, const uint8_t slot_num)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(emulator);
   VERIFY_COND_RETURN_STATUS_IF_TRUE(slot_num > 9, STATUS_ERR_INVALID_ARG);

@@ -4,8 +4,8 @@
 #include <SDL2/SDL.h>
 
 #include "callback.h"
-#include "logging.h"
 #include "joypad.h"
+#include "save_state.h"
 #include "status_code.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
@@ -122,11 +122,11 @@ static status_code_t handle_save_state_requests(SDL_Event event)
   }
   else if (event.key.keysym.mod & KMOD_GUI)
   {
-    Log_I("Saving game state to slot #%d", slot_num);
+    status = request_save_state(slot_num, MODE_SAVE_STATE);
   }
   else if (event.key.keysym.mod & KMOD_SHIFT)
   {
-    Log_I("Loading game state from slot #%d", slot_num);
+    status = request_save_state(slot_num, MODE_LOAD_STATE);
   }
 
   return status;
