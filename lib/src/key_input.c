@@ -120,7 +120,7 @@ static status_code_t handle_save_state_requests(SDL_Event event)
   {
     return STATUS_OK;
   }
-  else if (event.key.keysym.mod & KMOD_GUI)
+  else if (event.key.keysym.mod & KMOD_CTRL || event.key.keysym.mod & KMOD_GUI)
   {
     status = request_snapshot(slot_num, MODE_SAVE_SNAPSHOT);
   }

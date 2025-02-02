@@ -87,6 +87,7 @@ make
 | Keys | Function |
 | :--- | :--- |
 |`CMD` + `0...9` | Snapshot game state and save it to slot 0 ... 9 |
+|`CTRL` + `0...9` | Same as `CMD` + `0...9` |
 |`SHIFT` + `0...9` | Load snapshot from slot 0 ... 9|
 
 # Additional Resources
