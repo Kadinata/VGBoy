@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h>
 
 #include "callback.h"
+#include "logging.h"
 #include "joypad.h"
 #include "status_code.h"
 
@@ -28,8 +29,10 @@ static uint8_t const scancode_key_mapping[] = {
 };
 
 static inline uint16_t get_key_from_scancode(SDL_Scancode scancode);
+static inline uint8_t get_slot_num_from_scancode(SDL_Scancode scancode);
 static inline status_code_t should_quit(SDL_Event event);
 static status_code_t update_key_press(SDL_Event event);
+static status_code_t handle_save_state_requests(SDL_Event event);
 
 status_code_t key_input_init(callback_t *const key_update_cb)
 {
@@ -52,6 +55,9 @@ status_code_t key_input_read(void)
 
     status = update_key_press(event);
     RETURN_STATUS_IF_NOT_OK(status);
+
+    status = handle_save_state_requests(event);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
 
   return status;
@@ -60,6 +66,36 @@ status_code_t key_input_read(void)
 static inline uint16_t get_key_from_scancode(SDL_Scancode scancode)
 {
   return (scancode < ARRAY_SIZE(scancode_key_mapping)) ? scancode_key_mapping[scancode] : 0;
+}
+
+static inline uint8_t get_slot_num_from_scancode(SDL_Scancode scancode)
+{
+  switch (scancode)
+  {
+  case SDL_SCANCODE_0:
+    return 0;
+  case SDL_SCANCODE_1:
+    return 1;
+  case SDL_SCANCODE_2:
+    return 2;
+  case SDL_SCANCODE_3:
+    return 3;
+  case SDL_SCANCODE_4:
+    return 4;
+  case SDL_SCANCODE_5:
+    return 5;
+  case SDL_SCANCODE_6:
+    return 6;
+  case SDL_SCANCODE_7:
+    return 7;
+  case SDL_SCANCODE_8:
+    return 8;
+  case SDL_SCANCODE_9:
+    return 9;
+  default:
+    break;
+  }
+  return 0xFF;
 }
 
 static inline status_code_t should_quit(SDL_Event event)
@@ -72,6 +108,28 @@ static inline status_code_t should_quit(SDL_Event event)
   }
 
   return STATUS_OK;
+}
+
+static status_code_t handle_save_state_requests(SDL_Event event)
+{
+
+  status_code_t status = STATUS_OK;
+  uint8_t slot_num = get_slot_num_from_scancode(event.key.keysym.scancode);
+
+  if ((event.type != SDL_KEYUP) || (slot_num > 9))
+  {
+    return STATUS_OK;
+  }
+  else if (event.key.keysym.mod & KMOD_GUI)
+  {
+    Log_I("Saving game state to slot #%d", slot_num);
+  }
+  else if (event.key.keysym.mod & KMOD_SHIFT)
+  {
+    Log_I("Loading game state from slot #%d", slot_num);
+  }
+
+  return status;
 }
 
 static status_code_t update_key_press(SDL_Event event)
