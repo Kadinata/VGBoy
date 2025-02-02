@@ -93,8 +93,7 @@ status_code_t unload_cartridge(mbc_handle_t *const mbc)
 static inline size_t get_file_size(const char *filename)
 {
   struct stat st;
-  stat(filename, &st);
-  return st.st_size;
+  return (stat(filename, &st) == 0) ? st.st_size : 0;
 }
 
 static status_code_t save_file(const char *filename, void *const data, const size_t size)
