@@ -34,7 +34,7 @@ void test_when_writing_0_then_1_rtc_registers_do_latch(void)
 
   /** Set the latch to false */
   rtc.state.prev_latch = true;
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, false));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 0));
   TEST_ASSERT_FALSE(rtc.state.prev_latch);
 
   /** Verify register values are unchanged */
@@ -46,7 +46,7 @@ void test_when_writing_0_then_1_rtc_registers_do_latch(void)
 
   /** Set the latch to true */
   time_ExpectAndReturn(NULL, get_time());
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, true));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 1));
   TEST_ASSERT_TRUE(rtc.state.prev_latch);
 
   /** Verify register values are updated */
@@ -73,7 +73,7 @@ void test_when_writing_1_then_1_rtc_registers_do_not_latch(void)
 
   /** Set the latch to false */
   rtc.state.prev_latch = true;
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, true));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 1));
   TEST_ASSERT_TRUE(rtc.state.prev_latch);
 
   /** Verify register values are unchanged */

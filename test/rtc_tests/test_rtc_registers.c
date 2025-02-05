@@ -14,8 +14,8 @@ void stub_latch_rtc_registers(bool update_time)
   {
     time_ExpectAndReturn(NULL, get_time());
   }
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, false));
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, true));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 0));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 1));
 }
 
 void setUp(void)

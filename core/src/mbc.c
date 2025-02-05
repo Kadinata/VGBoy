@@ -9,14 +9,18 @@
 #include "bus_interface.h"
 #include "callback.h"
 #include "rom.h"
+#include "rtc.h"
 #include "status_code.h"
 
 static status_code_t mbc_init_ext_ram(mbc_handle_t *const mbc);
 static status_code_t mbc_init_battery(mbc_handle_t *const mbc);
+static status_code_t mbc_init_rtc(mbc_handle_t *const mbc);
 static status_code_t mbc_read(void *const resource, uint16_t address, uint8_t *const data);
 static status_code_t mbc_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_ext_ram_read(void *const resource, uint16_t address, uint8_t *const data);
 static status_code_t mbc_ext_ram_write(void *const resource, uint16_t address, uint8_t const data);
+static status_code_t mbc_ext_ram_rtc_read(void *const resource, uint16_t address, uint8_t *const data);
+static status_code_t mbc_ext_ram_rtc_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_rom_read(void *const resource, uint16_t address, uint8_t *const data);
 static status_code_t mbc_no_rom_banking_write(void *const resource, uint16_t address, uint8_t const data);
 static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t const data);
@@ -52,6 +56,9 @@ status_code_t mbc_load_rom(mbc_handle_t *const mbc, uint8_t *const rom_data, con
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = mbc_init_battery(mbc);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = mbc_init_rtc(mbc);
   RETURN_STATUS_IF_NOT_OK(status);
 
   mbc->rom.num_banks = (2 << (mbc->rom.content.header->rom_size & 0x0F));
@@ -123,14 +130,8 @@ status_code_t mbc_cleanup(mbc_handle_t *const mbc)
 
   mbc_save_game(mbc);
 
-  for (uint8_t i = 0; i < MAX_RAM_BANKS; i++)
-  {
-    if (mbc->ext_ram.banks[i])
-    {
-      free(mbc->ext_ram.banks[i]);
-      mbc->ext_ram.banks[i] = NULL;
-    }
-  }
+  free(mbc->ext_ram.data);
+  mbc->ext_ram.data = NULL;
 
   return rom_unload(&mbc->rom.content);
 }
@@ -139,7 +140,6 @@ static status_code_t mbc_init_ext_ram(mbc_handle_t *const mbc)
 {
   mbc->ext_ram.enabled = 0;
   mbc->ext_ram.num_banks = 0;
-  memset(mbc->ext_ram.banks, 0, sizeof(mbc->ext_ram.banks));
 
   switch (mbc->rom.content.header->ram_size)
   {
@@ -162,15 +162,24 @@ static status_code_t mbc_init_ext_ram(mbc_handle_t *const mbc)
     break;
   }
 
-  for (uint8_t i = 0; i < mbc->ext_ram.num_banks; i++)
+  mbc->ext_ram.data = calloc(mbc->ext_ram.num_banks, 0x2000);
+  if (mbc->ext_ram.data == NULL)
   {
-    mbc->ext_ram.banks[i] = malloc(0x2000);
-    memset(mbc->ext_ram.banks[i], 0, 0x2000);
+    return STATUS_ERR_NO_MEMORY;
   }
 
   mbc->ext_ram.active_bank_num = 0;
-  mbc->ext_ram.active_bank = mbc->ext_ram.banks[0];
+  mbc->ext_ram.active_bank = mbc->ext_ram.data;
   mbc->ext_ram.bus_interface.offset = 0xA000;
+
+  switch (mbc->rom.content.header->cartridge_type)
+  {
+  case ROM_MBC3_TIMER_BATT:
+  case ROM_MBC3_TIMER_RAM_BATT:
+    return bus_interface_init(&mbc->ext_ram.bus_interface, mbc_ext_ram_rtc_read, mbc_ext_ram_rtc_write, mbc);
+  default:
+    break;
+  }
 
   return bus_interface_init(&mbc->ext_ram.bus_interface, mbc_ext_ram_read, mbc_ext_ram_write, mbc);
 }
@@ -202,6 +211,20 @@ static status_code_t mbc_init_battery(mbc_handle_t *const mbc)
   return STATUS_OK;
 }
 
+static status_code_t mbc_init_rtc(mbc_handle_t *const mbc)
+{
+  switch (mbc->rom.content.header->cartridge_type)
+  {
+  case ROM_MBC3_TIMER_BATT:
+  case ROM_MBC3_TIMER_RAM_BATT:
+    return rtc_init(&mbc->rtc);
+  default:
+    break;
+  }
+
+  return STATUS_OK;
+}
+
 static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num, bool save_game)
 {
   VERIFY_COND_RETURN_STATUS_IF_TRUE(ram_bank_num >= mbc->ext_ram.num_banks, STATUS_ERR_INVALID_ARG);
@@ -215,7 +238,7 @@ static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uin
   }
 
   mbc->ext_ram.active_bank_num = ram_bank_num;
-  mbc->ext_ram.active_bank = mbc->ext_ram.banks[ram_bank_num];
+  mbc->ext_ram.active_bank = &(mbc->ext_ram.data[0x2000 * mbc->ext_ram.active_bank_num]);
 
   return STATUS_OK;
 }
@@ -239,7 +262,9 @@ status_code_t mbc_load_saved_game(mbc_handle_t *const mbc)
     return STATUS_OK;
   }
 
-  return mbc->callbacks.load_game(mbc->ext_ram.active_bank, 0x2000);
+  // TODO: Save RTC values
+
+  return mbc->callbacks.load_game(mbc->ext_ram.active_bank, 0x2000 * mbc->ext_ram.num_banks);
 }
 
 status_code_t mbc_save_game(mbc_handle_t *const mbc)
@@ -251,7 +276,9 @@ status_code_t mbc_save_game(mbc_handle_t *const mbc)
     return STATUS_OK;
   }
 
-  return mbc->callbacks.save_game(mbc->ext_ram.active_bank, 0x2000);
+  // TODO: Save RTC values
+
+  return mbc->callbacks.save_game(mbc->ext_ram.data, 0x2000 * mbc->ext_ram.num_banks);
 }
 
 status_code_t mbc_reload_banks(mbc_handle_t *const mbc)
@@ -411,7 +438,11 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
   {
     /** 0x0000 - 0x1FFF: RAM and timer enable (Write only) */
     mbc->ext_ram.enabled = ((data & 0x0F) == 0xA);
-    /** TODO: enable RTC regs */
+
+    if (mbc->rtc.state.present)
+    {
+      mbc->rtc.state.enabled = ((data & 0x0F) == 0xA);
+    }
   }
   else if ((address >= 0x2000) && (address < 0x4000))
   {
@@ -434,13 +465,21 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
     {
       status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
       RETURN_STATUS_IF_NOT_OK(status);
+
+      if (mbc->rtc.state.present)
+      {
+        mbc->rtc.state.mapped_to_memory = false;
+      }
     }
-    else if ((data >= 0x08) && (data <= 0x0C))
+    else if ((data >= 0x08) && (data <= 0x0C) && mbc->rtc.state.present)
     {
-      // TODO: Map RTC to EXT RAM range
+      status = rtc_select_reg(&mbc->rtc, data - 0x08);
+      RETURN_STATUS_IF_NOT_OK(status);
+
+      mbc->rtc.state.mapped_to_memory = true;
     }
   }
-  else if ((address >= 0x6000) && (address < 0x8000))
+  else if ((address >= 0x6000) && (address < 0x8000) && mbc->rtc.state.present)
   {
     /**
      * 0x6000 - 0x7FFF: Latch clock data (Write only)
@@ -448,8 +487,8 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
      * The latched data will not change until it becomes latched again, by repeating the write $00->$01 procedure.
      * This provides a way to read the RTC registers while the clock keeps ticking.
      */
-
-    // TODO: Implement
+    status = rtc_latch(&mbc->rtc, data);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
 
   return STATUS_OK;
@@ -464,7 +503,6 @@ static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t
   {
     /** 0x0000 - 0x1FFF: RAM enable (Write only) */
     mbc->ext_ram.enabled = ((data & 0x0F) == 0xA);
-    /** TODO: enable RTC regs */
   }
   else if ((address >= 0x2000) && (address < 0x3000))
   {
@@ -485,17 +523,6 @@ static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t
     /** 0x4000 - 0x5FFF: RAM bank number (Write only) */
     status = mbc_switch_ext_ram_bank(mbc, data & 0xF, true);
     RETURN_STATUS_IF_NOT_OK(status);
-  }
-  else if ((address >= 0x6000) && (address < 0x8000))
-  {
-    /**
-     * 0x6000 - 0x7FFF: Latch clock data (Write only)
-     * When writing $00, and then $01 to this register, the current time becomes latched into the RTC registers.
-     * The latched data will not change until it becomes latched again, by repeating the write $00->$01 procedure.
-     * This provides a way to read the RTC registers while the clock keeps ticking.
-     */
-
-    // TODO: Implement
   }
 
   return STATUS_OK;
@@ -533,4 +560,34 @@ static status_code_t mbc_ext_ram_write(void *const resource, uint16_t address, u
   }
 
   return STATUS_OK;
+}
+
+static status_code_t mbc_ext_ram_rtc_read(void *const resource, uint16_t address, uint8_t *const data)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(address >= 0x2000, STATUS_ERR_ADDRESS_OUT_OF_BOUND);
+
+  mbc_handle_t *const mbc = (mbc_handle_t *)resource;
+
+  if (mbc->rtc.state.mapped_to_memory)
+  {
+    return rtc_read(&mbc->rtc, data);
+  }
+
+  return mbc_ext_ram_read(resource, address, data);
+}
+
+static status_code_t mbc_ext_ram_rtc_write(void *const resource, uint16_t address, uint8_t const data)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(resource);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(address >= 0x2000, STATUS_ERR_ADDRESS_OUT_OF_BOUND);
+
+  mbc_handle_t *const mbc = (mbc_handle_t *)resource;
+
+  if (mbc->rtc.state.mapped_to_memory)
+  {
+    return rtc_write(&mbc->rtc, data);
+  }
+
+  return mbc_ext_ram_write(resource, address, data);
 }

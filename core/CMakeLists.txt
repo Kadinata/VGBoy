@@ -24,5 +24,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   src/ppu.c
   src/ram.c
   src/rom.c
+  src/rtc.c
   src/timer.c
 )

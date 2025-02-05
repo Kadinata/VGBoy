@@ -21,6 +21,9 @@ status_code_t rtc_init(rtc_handle_t *const rtc)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
 
+  rtc->state.present = true;
+  rtc->state.enabled = false;
+  rtc->state.mapped_to_memory = false;
   rtc->state.current_timestamp = 0;
   rtc->state.prev_timestamp = time(NULL);
 
@@ -37,19 +40,17 @@ status_code_t rtc_select_reg(rtc_handle_t *const rtc, rtc_reg_type_t const reg)
   return STATUS_OK;
 }
 
-status_code_t rtc_latch(rtc_handle_t *const rtc, bool latch)
+status_code_t rtc_latch(rtc_handle_t *const rtc, uint8_t const command)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
 
-  status_code_t status = STATUS_OK;
-
-  if (!rtc->state.prev_latch && latch)
+  if ((rtc->state.prev_latch == 0) && (command == 1))
   {
     rtc_sync(rtc);
     load_timestamp_to_regs(rtc, &rtc->registers);
   }
 
-  rtc->state.prev_latch = latch;
+  rtc->state.prev_latch = command;
 
   return STATUS_OK;
 }
@@ -68,7 +69,6 @@ status_code_t rtc_write(rtc_handle_t *const rtc, uint8_t const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
 
-  status_code_t status = STATUS_OK;
   rtc_registers_t mirror_regs = {0};
 
   if (is_halted(rtc))

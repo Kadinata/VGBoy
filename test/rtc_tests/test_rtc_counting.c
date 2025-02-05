@@ -98,8 +98,8 @@ void test_when_counter_overflows_the_corresponding_flag_is_set(void)
 
   /* Latch counter value to registers */
   time_ExpectAndReturn(NULL, get_time());
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, false));
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, true));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 0));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 1));
 
   /** Verify register values are updated and no overflow */
   TEST_ASSERT_EQUAL_INT(59, rtc.registers.seconds);
@@ -125,8 +125,8 @@ void test_when_counter_overflows_the_corresponding_flag_is_set(void)
 
   /* Latch counter value to registers again */
   time_ExpectAndReturn(NULL, get_time());
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, false));
-  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, true));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 0));
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, rtc_latch(&rtc, 1));
 
   /** Verify register values are updated and there is an overflow */
   TEST_ASSERT_EQUAL_INT(0, rtc.registers.seconds);

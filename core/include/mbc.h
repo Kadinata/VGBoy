@@ -6,6 +6,7 @@
 
 #include "bus_interface.h"
 #include "rom.h"
+#include "rtc.h"
 #include "status_code.h"
 
 #define MAX_RAM_BANKS (16)
@@ -41,7 +42,7 @@ typedef struct
 {
   bool enabled;
   uint8_t num_banks;
-  uint8_t *banks[16];
+  uint8_t *data;
   uint8_t *active_bank;
   uint8_t active_bank_num;
   bus_interface_t bus_interface;
@@ -64,6 +65,7 @@ typedef struct
   mbc_rom_t rom;
   mbc_ext_ram_t ext_ram;
   mbc_battery_t batt;
+  rtc_handle_t rtc;
   banking_mode_t banking_mode;
   bus_interface_t bus_interface;
   mbc_callbacks_t callbacks;
