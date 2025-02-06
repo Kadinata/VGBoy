@@ -11,7 +11,17 @@
 
 #define MAX_RAM_BANKS (16)
 
-typedef status_code_t (*save_game_callback_fn)(uint8_t *const data, size_t const size);
+typedef struct
+{
+  rtc_handle_t *rtc;
+  struct
+  {
+    uint8_t *ram_data;
+    size_t ram_data_size;
+  };
+} saved_game_data_t;
+
+typedef status_code_t (*save_game_callback_fn)(saved_game_data_t *const data);
 
 typedef enum
 {
@@ -73,7 +83,7 @@ typedef struct
 
 status_code_t mbc_init(mbc_handle_t *const mbc);
 status_code_t mbc_load_rom(mbc_handle_t *const mbc, uint8_t *const rom_data, const size_t size);
-status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, save_game_callback_fn const save_game, save_game_callback_fn const load_game);
+status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, mbc_callbacks_t *const callbacks);
 status_code_t mbc_cleanup(mbc_handle_t *const mbc);
 status_code_t mbc_save_game(mbc_handle_t *const mbc);
 status_code_t mbc_load_saved_game(mbc_handle_t *const mbc);

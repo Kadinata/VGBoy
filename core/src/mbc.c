@@ -114,12 +114,13 @@ status_code_t mbc_load_rom(mbc_handle_t *const mbc, uint8_t *const rom_data, con
   return STATUS_OK;
 }
 
-status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, save_game_callback_fn const save_game, save_game_callback_fn const load_game)
+status_code_t mbc_register_callbacks(mbc_handle_t *const mbc, mbc_callbacks_t *const callbacks)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(mbc);
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(callbacks);
 
-  mbc->callbacks.save_game = save_game;
-  mbc->callbacks.load_game = load_game;
+  mbc->callbacks.save_game = callbacks->save_game;
+  mbc->callbacks.load_game = callbacks->load_game;
 
   return STATUS_OK;
 }
@@ -262,9 +263,13 @@ status_code_t mbc_load_saved_game(mbc_handle_t *const mbc)
     return STATUS_OK;
   }
 
-  // TODO: Save RTC values
+  saved_game_data_t saved_data = {
+      .ram_data_size = 0x2000 * mbc->ext_ram.num_banks,
+      .ram_data = mbc->ext_ram.data,
+      .rtc = &mbc->rtc,
+  };
 
-  return mbc->callbacks.load_game(mbc->ext_ram.active_bank, 0x2000 * mbc->ext_ram.num_banks);
+  return mbc->callbacks.load_game(&saved_data);
 }
 
 status_code_t mbc_save_game(mbc_handle_t *const mbc)
@@ -276,9 +281,13 @@ status_code_t mbc_save_game(mbc_handle_t *const mbc)
     return STATUS_OK;
   }
 
-  // TODO: Save RTC values
+  saved_game_data_t saved_data = {
+      .ram_data_size = 0x2000 * mbc->ext_ram.num_banks,
+      .ram_data = mbc->ext_ram.data,
+      .rtc = &mbc->rtc,
+  };
 
-  return mbc->callbacks.save_game(mbc->ext_ram.data, 0x2000 * mbc->ext_ram.num_banks);
+  return mbc->callbacks.save_game(&saved_data);
 }
 
 status_code_t mbc_reload_banks(mbc_handle_t *const mbc)
