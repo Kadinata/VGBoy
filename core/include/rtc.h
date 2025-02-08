@@ -56,9 +56,11 @@ typedef struct
 
 status_code_t rtc_init(rtc_handle_t *const rtc);
 status_code_t rtc_sync(rtc_handle_t *const rtc);
+status_code_t rtc_enable(rtc_handle_t *const rtc, bool enable);
 status_code_t rtc_latch(rtc_handle_t *const rtc, uint8_t const command);
 status_code_t rtc_read(rtc_handle_t *const rtc, uint8_t *const data);
 status_code_t rtc_write(rtc_handle_t *const rtc, uint8_t const data);
 status_code_t rtc_select_reg(rtc_handle_t *const rtc, rtc_reg_type_t const reg);
+bool rtc_is_present(rtc_handle_t *const rtc);
 
 #endif /* __DMG_RTC_H__ */

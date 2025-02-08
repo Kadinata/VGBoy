@@ -40,6 +40,15 @@ status_code_t rtc_select_reg(rtc_handle_t *const rtc, rtc_reg_type_t const reg)
   return STATUS_OK;
 }
 
+status_code_t rtc_enable(rtc_handle_t *const rtc, bool enable)
+{
+  VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
+
+  rtc->state.enabled = rtc->state.present && enable;
+
+  return STATUS_OK;
+}
+
 status_code_t rtc_latch(rtc_handle_t *const rtc, uint8_t const command)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
@@ -60,7 +69,7 @@ status_code_t rtc_read(rtc_handle_t *const rtc, uint8_t *const data)
   VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
   VERIFY_PTR_RETURN_ERROR_IF_NULL(data);
 
-  *data = rtc->registers.buffer[rtc->state.active_reg] & rtc_register_masks[rtc->state.active_reg];
+  *data = rtc->state.enabled ? (rtc->registers.buffer[rtc->state.active_reg] & rtc_register_masks[rtc->state.active_reg]) : 0xFF;
 
   return STATUS_OK;
 }
@@ -68,6 +77,7 @@ status_code_t rtc_read(rtc_handle_t *const rtc, uint8_t *const data)
 status_code_t rtc_write(rtc_handle_t *const rtc, uint8_t const data)
 {
   VERIFY_PTR_RETURN_ERROR_IF_NULL(rtc);
+  VERIFY_COND_RETURN_STATUS_IF_TRUE(!rtc->state.enabled, STATUS_OK);
 
   rtc_registers_t mirror_regs = {0};
 
@@ -100,6 +110,11 @@ status_code_t rtc_sync(rtc_handle_t *const rtc)
   rtc_check_overflow(rtc);
 
   return STATUS_OK;
+}
+
+bool rtc_is_present(rtc_handle_t *const rtc)
+{
+  return rtc && rtc->state.present;
 }
 
 static void rtc_halt(rtc_handle_t *const rtc, bool halt)

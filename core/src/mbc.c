@@ -52,13 +52,13 @@ status_code_t mbc_load_rom(mbc_handle_t *const mbc, uint8_t *const rom_data, con
   status = rom_load(&mbc->rom.content, rom_data, size);
   RETURN_STATUS_IF_NOT_OK(status);
 
-  status = mbc_init_ext_ram(mbc);
-  RETURN_STATUS_IF_NOT_OK(status);
-
   status = mbc_init_battery(mbc);
   RETURN_STATUS_IF_NOT_OK(status);
 
   status = mbc_init_rtc(mbc);
+  RETURN_STATUS_IF_NOT_OK(status);
+
+  status = mbc_init_ext_ram(mbc);
   RETURN_STATUS_IF_NOT_OK(status);
 
   mbc->rom.num_banks = (2 << (mbc->rom.content.header->rom_size & 0x0F));
@@ -173,13 +173,9 @@ static status_code_t mbc_init_ext_ram(mbc_handle_t *const mbc)
   mbc->ext_ram.active_bank = mbc->ext_ram.data;
   mbc->ext_ram.bus_interface.offset = 0xA000;
 
-  switch (mbc->rom.content.header->cartridge_type)
+  if (rtc_is_present(&mbc->rtc))
   {
-  case ROM_MBC3_TIMER_BATT:
-  case ROM_MBC3_TIMER_RAM_BATT:
     return bus_interface_init(&mbc->ext_ram.bus_interface, mbc_ext_ram_rtc_read, mbc_ext_ram_rtc_write, mbc);
-  default:
-    break;
   }
 
   return bus_interface_init(&mbc->ext_ram.bus_interface, mbc_ext_ram_read, mbc_ext_ram_write, mbc);
@@ -240,6 +236,7 @@ static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uin
 
   mbc->ext_ram.active_bank_num = ram_bank_num;
   mbc->ext_ram.active_bank = &(mbc->ext_ram.data[0x2000 * mbc->ext_ram.active_bank_num]);
+  mbc->ext_ram_access_mode = MBC_EXT_RAM_ACCESS_RAM;
 
   return STATUS_OK;
 }
@@ -448,10 +445,8 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
     /** 0x0000 - 0x1FFF: RAM and timer enable (Write only) */
     mbc->ext_ram.enabled = ((data & 0x0F) == 0xA);
 
-    if (mbc->rtc.state.present)
-    {
-      mbc->rtc.state.enabled = ((data & 0x0F) == 0xA);
-    }
+    status = rtc_enable(&mbc->rtc, (data & 0x0F) == 0xA);
+    RETURN_STATUS_IF_NOT_OK(status);
   }
   else if ((address >= 0x2000) && (address < 0x4000))
   {
@@ -474,21 +469,16 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
     {
       status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
       RETURN_STATUS_IF_NOT_OK(status);
-
-      if (mbc->rtc.state.present)
-      {
-        mbc->rtc.state.mapped_to_memory = false;
-      }
     }
-    else if ((data >= 0x08) && (data <= 0x0C) && mbc->rtc.state.present)
+    else if ((data >= 0x08) && (data <= 0x0C) && rtc_is_present(&mbc->rtc))
     {
       status = rtc_select_reg(&mbc->rtc, data - 0x08);
       RETURN_STATUS_IF_NOT_OK(status);
 
-      mbc->rtc.state.mapped_to_memory = true;
+      mbc->ext_ram_access_mode = MBC_EXT_RAM_ACCESS_RTC;
     }
   }
-  else if ((address >= 0x6000) && (address < 0x8000) && mbc->rtc.state.present)
+  else if ((address >= 0x6000) && (address < 0x8000) && rtc_is_present(&mbc->rtc))
   {
     /**
      * 0x6000 - 0x7FFF: Latch clock data (Write only)
@@ -578,12 +568,19 @@ static status_code_t mbc_ext_ram_rtc_read(void *const resource, uint16_t address
 
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
 
-  if (mbc->rtc.state.mapped_to_memory)
+  switch (mbc->ext_ram_access_mode)
   {
+  case MBC_EXT_RAM_ACCESS_RAM:
+    return mbc_ext_ram_read(resource, address, data);
+  case MBC_EXT_RAM_ACCESS_RTC:
     return rtc_read(&mbc->rtc, data);
+  default:
+    break;
   }
 
-  return mbc_ext_ram_read(resource, address, data);
+  *data = 0xFF;
+
+  return STATUS_OK;
 }
 
 static status_code_t mbc_ext_ram_rtc_write(void *const resource, uint16_t address, uint8_t const data)
@@ -593,10 +590,15 @@ static status_code_t mbc_ext_ram_rtc_write(void *const resource, uint16_t addres
 
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
 
-  if (mbc->rtc.state.mapped_to_memory)
+  switch (mbc->ext_ram_access_mode)
   {
+  case MBC_EXT_RAM_ACCESS_RAM:
+    return mbc_ext_ram_write(resource, address, data);
+  case MBC_EXT_RAM_ACCESS_RTC:
     return rtc_write(&mbc->rtc, data);
+  default:
+    break;
   }
 
-  return mbc_ext_ram_write(resource, address, data);
+  return STATUS_OK;
 }
