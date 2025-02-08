@@ -5,6 +5,7 @@
 
 #include "rtc.h"
 #include "time_helper.h"
+#include "rtc_test_helper.h"
 #include "mock_time.h"
 
 static rtc_handle_t rtc;
@@ -14,6 +15,7 @@ void setUp(void)
 {
   memset(&rtc, 0, sizeof(rtc_handle_t));
   init_time(starting_timer_value);
+  rtc_init_and_enable(&rtc);
 }
 
 void tearDown(void)
@@ -22,9 +24,6 @@ void tearDown(void)
 
 void test_when_not_halted_the_rtc_is_counting(void)
 {
-  time_ExpectAndReturn(NULL, get_time());
-  rtc_init(&rtc);
-
   TEST_ASSERT_EQUAL_INT(0, rtc.state.current_timestamp);
   TEST_ASSERT_EQUAL_INT(starting_timer_value, rtc.state.prev_timestamp);
 
@@ -39,9 +38,6 @@ void test_when_not_halted_the_rtc_is_counting(void)
 
 void test_when_halted_counting_is_paused(void)
 {
-  time_ExpectAndReturn(NULL, get_time());
-  rtc_init(&rtc);
-
   TEST_ASSERT_EQUAL_INT(0, rtc.state.current_timestamp);
   TEST_ASSERT_EQUAL_INT(starting_timer_value, rtc.state.prev_timestamp);
 
@@ -59,9 +55,6 @@ void test_when_halted_counting_is_paused(void)
 
 void test_when_unhalted_counting_is_resumed(void)
 {
-  time_ExpectAndReturn(NULL, get_time());
-  rtc_init(&rtc);
-
   TEST_ASSERT_EQUAL_INT(0, rtc.state.current_timestamp);
   TEST_ASSERT_EQUAL_INT(starting_timer_value, rtc.state.prev_timestamp);
 
@@ -90,9 +83,6 @@ void test_when_unhalted_counting_is_resumed(void)
 
 void test_when_counter_overflows_the_corresponding_flag_is_set(void)
 {
-  time_ExpectAndReturn(NULL, get_time());
-  rtc_init(&rtc);
-
   /* Delay to the max counter value */
   delay(0x1FF, 23, 59, 59);
 
