@@ -163,10 +163,10 @@ static status_code_t mbc_init_ext_ram(mbc_handle_t *const mbc)
     break;
   }
 
-  mbc->ext_ram.data = calloc(mbc->ext_ram.num_banks, 0x2000);
-  if (mbc->ext_ram.data == NULL)
+  if (mbc->ext_ram.num_banks > 0)
   {
-    return STATUS_ERR_NO_MEMORY;
+    mbc->ext_ram.data = calloc(mbc->ext_ram.num_banks, 0x2000);
+    VERIFY_COND_RETURN_STATUS_IF_TRUE(mbc->ext_ram.data == NULL, STATUS_ERR_NO_MEMORY);
   }
 
   mbc->ext_ram.active_bank_num = 0;
@@ -317,7 +317,7 @@ static status_code_t mbc_read(void *const resource, uint16_t address, uint8_t *c
     return bus_interface_read(&mbc->ext_ram.bus_interface, address, data);
   }
 
-  return STATUS_OK;
+  return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
 }
 
 static status_code_t mbc_write(void *const resource, uint16_t address, uint8_t const data)
@@ -335,7 +335,7 @@ static status_code_t mbc_write(void *const resource, uint16_t address, uint8_t c
     return bus_interface_write(&mbc->ext_ram.bus_interface, address, data);
   }
 
-  return STATUS_OK;
+  return STATUS_ERR_ADDRESS_OUT_OF_BOUND;
 }
 
 static status_code_t mbc_rom_read(void *const resource, uint16_t address, uint8_t *const data)
@@ -381,7 +381,7 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
   else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
   {
     /** 0x4000 - 0x5FFF: RAM bank number or upper bits of ROM bank number (Write only) */
-    if (mbc->ext_ram.num_banks == MBC_EXT_RAM_SIZE_32K)
+    if (mbc->rom.content.header->ram_size == MBC_EXT_RAM_SIZE_32K)
     {
       status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
       RETURN_STATUS_IF_NOT_OK(status);
@@ -399,7 +399,7 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
     mbc->banking_mode = (data & 0x1) ? BANK_MODE_ADVANCED : BANK_MODE_SIMPLE;
     if (mbc->banking_mode == BANK_MODE_ADVANCED)
     {
-      if (mbc->ext_ram.num_banks == MBC_EXT_RAM_SIZE_32K)
+      if (mbc->rom.content.header->ram_size == MBC_EXT_RAM_SIZE_32K)
       {
         status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
         RETURN_STATUS_IF_NOT_OK(status);
