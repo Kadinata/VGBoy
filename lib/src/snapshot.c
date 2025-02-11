@@ -60,7 +60,7 @@ typedef struct
 {
   uint16_t rom_active_bank_num;
   uint8_t ram_active_bank_num;
-  banking_mode_t banking_mode;
+  uint32_t flags;
 } mbc_snapshot_t;
 
 typedef struct
@@ -205,7 +205,7 @@ static status_code_t save_snapshot(emulator_t *const emulator, const uint8_t slo
   /** Save MBC states */
   snapshot.mbc.rom_active_bank_num = emulator->mbc.rom.active_bank_num;
   snapshot.mbc.ram_active_bank_num = emulator->mbc.ext_ram.active_bank_num;
-  snapshot.mbc.banking_mode = emulator->mbc.banking_mode;
+  snapshot.mbc.flags = emulator->mbc.flags;
 
   /** Save PPU states */
   memcpy(&snapshot.ppu.lcd, &emulator->ppu.lcd.registers, sizeof(lcd_registers_t));
@@ -286,7 +286,7 @@ static status_code_t load_snapshot(emulator_t *const emulator, const uint8_t slo
   /** Load MBC states */
   emulator->mbc.rom.active_bank_num = snapshot.mbc.rom_active_bank_num;
   emulator->mbc.ext_ram.active_bank_num = snapshot.mbc.ram_active_bank_num;
-  emulator->mbc.banking_mode = snapshot.mbc.banking_mode;
+  emulator->mbc.flags = snapshot.mbc.flags;
 
   /** Load PPU states */
   memcpy(&emulator->ppu.lcd.registers, &snapshot.ppu.lcd, sizeof(lcd_registers_t));

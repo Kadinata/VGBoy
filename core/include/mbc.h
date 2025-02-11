@@ -35,15 +35,9 @@ typedef enum
 
 typedef enum
 {
-  MBC_EXT_RAM_ACCESS_RAM,
-  MBC_EXT_RAM_ACCESS_RTC,
-} ext_ram_access_mode_t;
-
-typedef enum
-{
-  BANK_MODE_SIMPLE = 0,
-  BANK_MODE_ADVANCED = 1,
-} banking_mode_t;
+  MBC_FLAGS_BANK_MODE_ADVANCED = (1 << 0),
+  MBC_FLAGS_ACCESS_MODE_RTC = (1 << 1),
+} mbc_flags_t;
 
 typedef struct
 {
@@ -82,8 +76,7 @@ typedef struct
   mbc_ext_ram_t ext_ram;
   mbc_battery_t batt;
   rtc_handle_t rtc;
-  banking_mode_t banking_mode;
-  ext_ram_access_mode_t ext_ram_access_mode;
+  mbc_flags_t flags;
   bus_interface_t bus_interface;
   mbc_callbacks_t callbacks;
 } mbc_handle_t;

@@ -50,7 +50,7 @@ void switch_ram_bank(mbc_handle_t *const mbc, uint8_t const bank_num)
 {
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc->bus_interface, 0x4000, bank_num));
   TEST_ASSERT_EQUAL_INT(bank_num, mbc->ext_ram.active_bank_num);
-  TEST_ASSERT_EQUAL_INT(MBC_EXT_RAM_ACCESS_RAM, mbc->ext_ram_access_mode);
+  TEST_ASSERT_FALSE(!!(mbc->flags & MBC_FLAGS_ACCESS_MODE_RTC));
 }
 
 void switch_rtc_reg(mbc_handle_t *const mbc, uint8_t const reg_num)
@@ -58,7 +58,7 @@ void switch_rtc_reg(mbc_handle_t *const mbc, uint8_t const reg_num)
   rtc_is_present_ExpectAndReturn(&mbc->rtc, true);
   rtc_select_reg_ExpectAndReturn(&mbc->rtc, reg_num - 0x08, STATUS_OK);
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc->bus_interface, 0x4000, reg_num));
-  TEST_ASSERT_EQUAL_INT(MBC_EXT_RAM_ACCESS_RTC, mbc->ext_ram_access_mode);
+  TEST_ASSERT_TRUE(!!(mbc->flags & MBC_FLAGS_ACCESS_MODE_RTC));
 }
 
 void setUp(void)

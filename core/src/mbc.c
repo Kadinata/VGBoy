@@ -30,6 +30,8 @@ static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t
 
 static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uint8_t ram_bank_num, bool save_game);
 static inline status_code_t mbc_switch_rom_bank(mbc_handle_t *const mbc, uint8_t rom_bank_num);
+static inline void mbc_set_flag(mbc_handle_t *const mbc, mbc_flags_t const flags);
+static inline void mbc_clear_flag(mbc_handle_t *const mbc, mbc_flags_t const flags);
 
 status_code_t mbc_init(mbc_handle_t *const mbc)
 {
@@ -236,7 +238,6 @@ static inline status_code_t mbc_switch_ext_ram_bank(mbc_handle_t *const mbc, uin
 
   mbc->ext_ram.active_bank_num = ram_bank_num;
   mbc->ext_ram.active_bank = &(mbc->ext_ram.data[0x2000 * mbc->ext_ram.active_bank_num]);
-  mbc->ext_ram_access_mode = MBC_EXT_RAM_ACCESS_RAM;
 
   return STATUS_OK;
 }
@@ -378,7 +379,7 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
     status = mbc_switch_rom_bank(mbc, rom_bank);
     RETURN_STATUS_IF_NOT_OK(status);
   }
-  else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
+  else if ((address >= 0x4000) && (address < 0x6000) && (mbc->flags & MBC_FLAGS_BANK_MODE_ADVANCED))
   {
     /** 0x4000 - 0x5FFF: RAM bank number or upper bits of ROM bank number (Write only) */
     if (mbc->rom.content.header->ram_size == MBC_EXT_RAM_SIZE_32K)
@@ -396,8 +397,8 @@ static status_code_t mbc_1_write(void *const resource, uint16_t address, uint8_t
   else if ((address >= 0x6000) && (address < 0x8000))
   {
     /** 0x6000 - 0x7FFF: Banking mode select (Write only) */
-    mbc->banking_mode = (data & 0x1) ? BANK_MODE_ADVANCED : BANK_MODE_SIMPLE;
-    if (mbc->banking_mode == BANK_MODE_ADVANCED)
+    ((data & 0x1) ? mbc_set_flag(mbc, MBC_FLAGS_BANK_MODE_ADVANCED) : mbc_clear_flag(mbc, MBC_FLAGS_BANK_MODE_ADVANCED));
+    if (mbc->flags & MBC_FLAGS_BANK_MODE_ADVANCED)
     {
       if (mbc->rom.content.header->ram_size == MBC_EXT_RAM_SIZE_32K)
       {
@@ -469,13 +470,15 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
     {
       status = mbc_switch_ext_ram_bank(mbc, data & 0x3, true);
       RETURN_STATUS_IF_NOT_OK(status);
+
+      mbc_clear_flag(mbc, MBC_FLAGS_ACCESS_MODE_RTC);
     }
     else if ((data >= 0x08) && (data <= 0x0C) && rtc_is_present(&mbc->rtc))
     {
       status = rtc_select_reg(&mbc->rtc, data - 0x08);
       RETURN_STATUS_IF_NOT_OK(status);
 
-      mbc->ext_ram_access_mode = MBC_EXT_RAM_ACCESS_RTC;
+      mbc_set_flag(mbc, MBC_FLAGS_ACCESS_MODE_RTC);
     }
   }
   else if ((address >= 0x6000) && (address < 0x8000) && rtc_is_present(&mbc->rtc))
@@ -568,19 +571,12 @@ static status_code_t mbc_ext_ram_rtc_read(void *const resource, uint16_t address
 
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
 
-  switch (mbc->ext_ram_access_mode)
+  if (mbc->flags & MBC_FLAGS_ACCESS_MODE_RTC)
   {
-  case MBC_EXT_RAM_ACCESS_RAM:
-    return mbc_ext_ram_read(resource, address, data);
-  case MBC_EXT_RAM_ACCESS_RTC:
     return rtc_read(&mbc->rtc, data);
-  default:
-    break;
   }
 
-  *data = 0xFF;
-
-  return STATUS_OK;
+  return mbc_ext_ram_read(resource, address, data);
 }
 
 static status_code_t mbc_ext_ram_rtc_write(void *const resource, uint16_t address, uint8_t const data)
@@ -590,15 +586,20 @@ static status_code_t mbc_ext_ram_rtc_write(void *const resource, uint16_t addres
 
   mbc_handle_t *const mbc = (mbc_handle_t *)resource;
 
-  switch (mbc->ext_ram_access_mode)
+  if (mbc->flags & MBC_FLAGS_ACCESS_MODE_RTC)
   {
-  case MBC_EXT_RAM_ACCESS_RAM:
-    return mbc_ext_ram_write(resource, address, data);
-  case MBC_EXT_RAM_ACCESS_RTC:
     return rtc_write(&mbc->rtc, data);
-  default:
-    break;
   }
 
-  return STATUS_OK;
+  return mbc_ext_ram_write(resource, address, data);
+}
+
+static inline void mbc_set_flag(mbc_handle_t *const mbc, mbc_flags_t const flags)
+{
+  mbc->flags |= flags;
+}
+
+static inline void mbc_clear_flag(mbc_handle_t *const mbc, mbc_flags_t const flags)
+{
+  mbc->flags &= ~flags;
 }
