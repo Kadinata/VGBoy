@@ -455,7 +455,7 @@ static status_code_t mbc_3_write(void *const resource, uint16_t address, uint8_t
     status = mbc_switch_rom_bank(mbc, rom_bank_num);
     RETURN_STATUS_IF_NOT_OK(status);
   }
-  else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
+  else if ((address >= 0x4000) && (address < 0x6000))
   {
     /**
      * 0x4000 - 0x5FFF: RAM bank number or RTC register select (Write only)
@@ -517,7 +517,7 @@ static status_code_t mbc_5_write(void *const resource, uint16_t address, uint8_t
     status = mbc_switch_rom_bank(mbc, (rom_bank_num & 0x1FF));
     RETURN_STATUS_IF_NOT_OK(status);
   }
-  else if ((address >= 0x4000) && (address < 0x6000) && (mbc->banking_mode == BANK_MODE_ADVANCED))
+  else if ((address >= 0x4000) && (address < 0x6000))
   {
     /** 0x4000 - 0x5FFF: RAM bank number (Write only) */
     status = mbc_switch_ext_ram_bank(mbc, data & 0xF, true);
