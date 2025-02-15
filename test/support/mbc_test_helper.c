@@ -3,6 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unity.h>
+
+#include "bus_interface.h"
+#include "mbc.h"
+#include "rom.h"
 
 #define MAX_ROM_SIZE (0x40000) // 256 KiB
 #define ROM_BANK_SIZE (0x4000)
@@ -35,6 +40,19 @@ void *create_rom(cartridge_type_t const cartridge_type, uint8_t const rom_size, 
   fill_rom_data(start_alloc_region, requested_size);
 
   return start_alloc_region;
+}
+
+void stub_test_ram_returns_error_when_reading_outside_address_range(mbc_handle_t *const mbc)
+{
+  uint8_t data;
+  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_read(&mbc->bus_interface, 0x9FFF, &data));
+  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_read(&mbc->bus_interface, 0xC000, &data));
+}
+
+void stub_test_ram_returns_error_when_writing_outside_address_range(mbc_handle_t *const mbc)
+{
+  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_write(&mbc->bus_interface, 0x9FFF, 0x55));
+  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_write(&mbc->bus_interface, 0xC000, 0x55));
 }
 
 static void add_header_checksum(rom_header_t *const header)

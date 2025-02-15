@@ -26,20 +26,6 @@ static uint8_t *rom_data;
     }                                                                                           \
   }
 
-#define TEST_MBC_3_RTC_IGNORES_WRITES_TO_ROM_BANK(BANK_NUM)                                     \
-  void test_mbc3_rtc__ignores_writes_to_bank_##BANK_NUM(void)                                   \
-  {                                                                                             \
-    uint8_t data;                                                                               \
-    switch_rom_bank(&mbc, BANK_NUM);                                                            \
-                                                                                                \
-    for (uint16_t address = 0x4000; address < 0x8000; address++)                                \
-    {                                                                                           \
-      TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, address, 0x55)); \
-      TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data)); \
-      TEST_ASSERT_EQUAL_HEX8(0xB0 | BANK_NUM, data);                                            \
-    }                                                                                           \
-  }
-
 void switch_rom_bank(mbc_handle_t *const mbc, uint8_t const bank_num)
 {
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc->bus_interface, 0x2000, bank_num));
@@ -110,10 +96,6 @@ void test_mbc3_rtc__can_read_bank_0(void)
 TEST_MBC_3_RTC_READ_FROM_ROM_BANK(1);
 TEST_MBC_3_RTC_READ_FROM_ROM_BANK(2);
 TEST_MBC_3_RTC_READ_FROM_ROM_BANK(3);
-
-// TEST_MBC_3_RTC_IGNORES_WRITES_TO_ROM_BANK(1);
-// TEST_MBC_3_RTC_IGNORES_WRITES_TO_ROM_BANK(2);
-// TEST_MBC_3_RTC_IGNORES_WRITES_TO_ROM_BANK(3);
 
 void test_mbc3_rtc__ignores_reads_when_ram_is_disabled(void)
 {
@@ -258,13 +240,10 @@ void test_mbc3_rtc__returns_error_when_writing_beyond_bank_1(void)
 
 void test_mbc3_rtc__returns_error_when_reading_outside_ram_address_range(void)
 {
-  uint8_t data;
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_read(&mbc.bus_interface, 0x9FFF, &data));
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_read(&mbc.bus_interface, 0xC000, &data));
+  stub_test_ram_returns_error_when_reading_outside_address_range(&mbc);
 }
 
 void test_mbc3_rtc__returns_error_when_writing_outside_ram_address_range(void)
 {
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_write(&mbc.bus_interface, 0x9FFF, 0x55));
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_write(&mbc.bus_interface, 0xC000, 0x55));
+  stub_test_ram_returns_error_when_writing_outside_address_range(&mbc);
 }

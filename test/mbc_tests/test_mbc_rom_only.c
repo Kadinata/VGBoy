@@ -129,13 +129,10 @@ void test_mbc_rom_only__returns_error_when_writing_beyond_bank_1(void)
 
 void test_mbc_rom_only__returns_error_when_reading_outside_ram_address_range(void)
 {
-  uint8_t data;
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_read(&mbc.bus_interface, 0x9FFF, &data));
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_read(&mbc.bus_interface, 0xC000, &data));
+  stub_test_ram_returns_error_when_reading_outside_address_range(&mbc);
 }
 
 void test_mbc_rom_only__returns_error_when_writing_outside_ram_address_range(void)
 {
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_write(&mbc.bus_interface, 0x9FFF, 0x55));
-  TEST_ASSERT_EQUAL_INT(STATUS_ERR_ADDRESS_OUT_OF_BOUND, bus_interface_write(&mbc.bus_interface, 0xC000, 0x55));
+  stub_test_ram_returns_error_when_writing_outside_address_range(&mbc);
 }
