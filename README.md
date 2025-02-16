@@ -1,5 +1,3 @@
-⚠️ Readme WIP ⚠️
-
 # VGBoy
 
 VGBoy (Virtual Game Boy): A Game Boy (DMG) emulator written fully in C, with SDL2 frontend to manage graphics and audio.
@@ -19,14 +17,14 @@ This is a perrsonal project that served as a learning opportunity for me to get 
 
 - Game Boy (DMG) emulation support
 - MBC1, MBC2, MBC3, and MBC 5 ROM support
-- Battery save
+- ROM Battery save
+- RTC support
 - PPU Rendering with pixel pipeline
 - Audio emulation
 - Game state snapshot / rewind feature
 
 ## In the Works
 
-- RTC Support
 - MBC6, MBC7, HuC-1 ROM support
 - Higher timing accuracy
 
