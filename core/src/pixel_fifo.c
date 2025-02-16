@@ -212,6 +212,14 @@ static status_code_t handle_pxfifo_push_data(pxfifo_handle_t *const pxfifo)
   status_code_t status = STATUS_OK;
   int16_t x = (pxfifo->pixel_fetcher.fetcher_x_index * 8) - (8 - (pxfifo->lcd->registers.scroll_x % 8));
 
+  pxfifo->counters.ticks = 0;
+  pxfifo->fifo_state = PXFIFO_GET_TILE_NUM;
+
+  if (x < 0)
+  {
+    return STATUS_OK;
+  }
+
   for (int8_t i = 0; i < PIXELS_PER_TILE; i++)
   {
     pxfifo_item_t fifo_item = {
@@ -233,15 +241,9 @@ static status_code_t handle_pxfifo_push_data(pxfifo_handle_t *const pxfifo)
       RETURN_STATUS_IF_NOT_OK(status);
     }
 
-    if (x >= 0)
-    {
-      ring_buffer_write(&pxfifo->bg_fifo.buffer, &fifo_item);
-      pxfifo->counters.pushed_px++;
-    }
+    ring_buffer_write(&pxfifo->bg_fifo.buffer, &fifo_item);
+    pxfifo->counters.pushed_px++;
   }
-
-  pxfifo->counters.ticks = 0;
-  pxfifo->fifo_state = PXFIFO_GET_TILE_NUM;
 
   return STATUS_OK;
 }
