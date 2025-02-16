@@ -42,6 +42,29 @@ void *create_rom(cartridge_type_t const cartridge_type, uint8_t const rom_size, 
   return start_alloc_region;
 }
 
+void stub_write_then_read_address_range(mbc_handle_t *const mbc, uint16_t const start_address, uint16_t const range, uint8_t const write_data, uint8_t const expected_data)
+{
+  uint8_t data;
+
+  for (uint16_t address = start_address; address < (start_address + range); address++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc->bus_interface, address, write_data));
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc->bus_interface, address, &data));
+    TEST_ASSERT_EQUAL_HEX8(expected_data, data);
+  }
+}
+
+void stub_read_address_range(mbc_handle_t *const mbc, uint16_t const start_address, uint16_t const range, uint8_t const expected_data)
+{
+  uint8_t data;
+
+  for (uint16_t address = start_address; address < (start_address + range); address++)
+  {
+    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc->bus_interface, address, &data));
+    TEST_ASSERT_EQUAL_HEX8(expected_data, data);
+  }
+}
+
 void stub_test_ram_returns_error_when_reading_outside_address_range(mbc_handle_t *const mbc)
 {
   uint8_t data;

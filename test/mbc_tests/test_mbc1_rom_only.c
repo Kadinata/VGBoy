@@ -14,30 +14,18 @@ TEST_FILE("mbc.c")
 static mbc_handle_t mbc;
 static uint8_t *rom_data;
 
-#define TEST_MBC_1_READ_FROM_ROM_BANK(BANK_NUM)                                                 \
-  void test_mbc1_rom_only__can_read_bank_##BANK_NUM(void)                                       \
-  {                                                                                             \
-    uint8_t data;                                                                               \
-    switch_rom_bank(&mbc, BANK_NUM);                                                            \
-    for (uint16_t address = 0x4000; address < 0x8000; address++)                                \
-    {                                                                                           \
-      TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data)); \
-      TEST_ASSERT_EQUAL_HEX8(0xB0 | BANK_NUM, data);                                            \
-    }                                                                                           \
+#define TEST_MBC_1_READ_FROM_ROM_BANK(BANK_NUM)                     \
+  void test_mbc1_rom_only__can_read_bank_##BANK_NUM(void)           \
+  {                                                                 \
+    switch_rom_bank(&mbc, BANK_NUM);                                \
+    stub_read_address_range(&mbc, 0x4000, 0x4000, 0xB0 | BANK_NUM); \
   }
 
-#define TEST_MBC_1_IGNORES_WRITES_TO_ROM_BANK(BANK_NUM)                                         \
-  void test_mbc1_rom_only__ignores_writes_to_bank_##BANK_NUM(void)                              \
-  {                                                                                             \
-    uint8_t data;                                                                               \
-    switch_rom_bank(&mbc, BANK_NUM);                                                            \
-                                                                                                \
-    for (uint16_t address = 0x4000; address < 0x8000; address++)                                \
-    {                                                                                           \
-      TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, address, 0x55)); \
-      TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data)); \
-      TEST_ASSERT_EQUAL_HEX8(0xB0 | BANK_NUM, data);                                            \
-    }                                                                                           \
+#define TEST_MBC_1_IGNORES_WRITES_TO_ROM_BANK(BANK_NUM)                              \
+  void test_mbc1_rom_only__ignores_writes_to_bank_##BANK_NUM(void)                   \
+  {                                                                                  \
+    switch_rom_bank(&mbc, BANK_NUM);                                                 \
+    stub_write_then_read_address_range(&mbc, 0x4000, 0x4000, 0x55, 0xB0 | BANK_NUM); \
   }
 
 void switch_rom_bank(mbc_handle_t *const mbc, uint8_t const bank_num)
@@ -87,13 +75,7 @@ void test_mbc1_rom_only__load_rom_does_not_initialize_rtc(void)
 
 void test_mbc1_rom_only__can_read_bank_0(void)
 {
-  uint8_t data;
-
-  for (uint16_t address = 0x150; address < 0x4000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0xB0, data);
-  }
+  stub_read_address_range(&mbc, 0x150, 0x4000 - 0x150, 0xB0);
 }
 
 TEST_MBC_1_READ_FROM_ROM_BANK(1);
@@ -106,31 +88,18 @@ TEST_MBC_1_IGNORES_WRITES_TO_ROM_BANK(3);
 
 void test_mbc1_rom_only__ignores_reads_from_ram_address_range(void)
 {
-  uint8_t data;
-
   /* Enable RAM */
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x0A));
 
-  for (uint16_t address = 0xA000; address < 0xC000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0xFF, data);
-  }
+  stub_read_address_range(&mbc, 0xA000, 0x2000, 0xFF);
 }
 
 void test_mbc1_rom_only__ignores_writes_to_ram_address_range(void)
 {
-  uint8_t data;
-
   /* Enable RAM */
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x0A));
 
-  for (uint16_t address = 0xA000; address < 0xC000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, address, 0x55));
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0xFF, data);
-  }
+  stub_write_then_read_address_range(&mbc, 0xA000, 0x2000, 0x55, 0xFF);
 }
 
 void test_mbc1_rom_only__returns_error_when_reading_beyond_bank_1(void)

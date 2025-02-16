@@ -56,54 +56,38 @@ void test_mbc1_ram__load_rom_does_not_initialize_rtc(void)
 
 void test_mbc1_ram__ignores_reads_when_ram_is_disabled(void)
 {
-  uint8_t data;
-
-  for (uint16_t address = 0xA000; address < 0xC000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0xFF, data);
-  }
+  stub_read_address_range(&mbc, 0xA000, 0x2000, 0xFF);
 }
 
 void test_mbc1_ram__ignores_writes_when_ram_is_disabled(void)
 {
-  uint8_t data;
+  /* Enable RAM */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x0A));
+  stub_write_then_read_address_range(&mbc, 0xA000, 0x2000, 0x55, 0x55);
 
-  for (uint16_t address = 0xA000; address < 0xC000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, address, 0x55));
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0xFF, data);
-  }
+  /* Disable RAM */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x00));
+  stub_write_then_read_address_range(&mbc, 0xA000, 0x2000, 0xAA, 0xFF);
+
+  /* Enable RAM again and verify RAM data has not been overwritten */
+  TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x0A));
+  stub_read_address_range(&mbc, 0xA000, 0x2000, 0x55);
 }
 
 void test_mbc1_ram__can_read_when_ram_is_enabled(void)
 {
-  uint8_t data;
-
   /* Enable RAM */
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x0A));
 
-  for (uint16_t address = 0xA000; address < 0xC000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0x00, data);
-  }
+  stub_read_address_range(&mbc, 0xA000, 0x2000, 0x00);
 }
 
 void test_mbc1_ram__can_write_when_ram_is_enabled(void)
 {
-  uint8_t data;
-
   /* Enable RAM */
   TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, 0x0000, 0x0A));
 
-  for (uint16_t address = 0xA000; address < 0xC000; address++)
-  {
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_write(&mbc.bus_interface, address, 0x55));
-    TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-    TEST_ASSERT_EQUAL_HEX8(0x55, data);
-  }
+  stub_write_then_read_address_range(&mbc, 0xA000, 0x2000, 0x55, 0x55);
 }
 
 void test_mbc1_ram__can_switch_ram_banks(void)
@@ -129,11 +113,7 @@ void test_mbc1_ram__can_switch_ram_banks(void)
   for (uint8_t bank_num = 0; bank_num < 4; bank_num++)
   {
     switch_ram_bank(&mbc, bank_num);
-    for (uint16_t address = 0xA000; address < 0xC000; address++)
-    {
-      TEST_ASSERT_EQUAL_INT(STATUS_OK, bus_interface_read(&mbc.bus_interface, address, &data));
-      TEST_ASSERT_EQUAL_HEX8(0xB0 | bank_num, data);
-    }
+    stub_read_address_range(&mbc, 0xA000, 0x2000, 0xB0 | bank_num);
   }
 }
 
